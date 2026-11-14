@@ -1,6 +1,7 @@
 extends Node3D
 
 const MinimapScript := preload("res://minimap.gd")
+const CampaignScript := preload("res://campaign.gd")
 
 const FLOOR_THICKNESS := 0.3
 const WALL_HEIGHT := 3.4
@@ -33,6 +34,7 @@ var world_root: Node3D
 var follow_camera: Camera3D
 var room_label: Label
 var minimap: Control
+var campaign_ui: CanvasLayer
 var materials: Dictionary = {}
 var rooms_by_id: Dictionary = {}
 
@@ -54,6 +56,11 @@ func _ready() -> void:
 	_add_room_props()
 	_build_camera()
 	_build_hud()
+	campaign_ui = CanvasLayer.new()
+	campaign_ui.name = "Campaign"
+	campaign_ui.set_script(CampaignScript)
+	campaign_ui.set("player", player)
+	add_child(campaign_ui)
 
 
 func _process(_delta: float) -> void:
@@ -66,6 +73,9 @@ func _process(_delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		if is_instance_valid(campaign_ui) and campaign_ui.call("is_board_open"):
+			campaign_ui.call("toggle_board")
+			return
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else Input.MOUSE_MODE_CAPTURED
 	elif event is InputEventMouseButton and event.pressed and Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -532,10 +542,13 @@ func _build_habitat_foundation() -> void:
 
 func _add_room_photo_panels() -> void:
 	# Real NASA photographs add mission context to these rooms.
-	var lab_mural := _make_textured_screen("Apollo 17 lunar field photo mural in lab", Vector3(-23.78, 2.15, 0.0), Vector2(9.2, 1.35), "res://assets/nasa/moon_surface/apollo17_station6_panorama.jpg", false)
+	var lab_mural := _make_textured_screen("Apollo 17 lunar field photo mural in lab", Vector3(-23.78, 2.1, 0.0), Vector2(9.2, 2.0), "res://assets/nasa/moon_surface/apollo17_station6_panorama.jpg", false)
 	lab_mural.rotation.y = PI * 0.5
-	_make_visual_box("Medical photo panel surround", Vector3(-18.0, 2.05, -21.82), Vector3(3.5, 2.36, 0.08), Color("#394d55"))
-	var med_mural := _make_textured_screen("NASA ISS medical training photo mural", Vector3(-18.0, 2.05, -21.76), Vector2(3.2, 2.13), "res://assets/nasa/iss065e074846.jpg", false)
+	# A close-up lunar sample photo gives the lab a real surface-science reference beside the NASA habitat model.
+	_make_visual_box("Lunar sample photo panel surround", Vector3(-18.0, 2.05, 5.82), Vector3(3.35, 2.36, 0.08), Color("#394d55"))
+	_make_textured_screen("Apollo 11 regolith sample reference", Vector3(-18.0, 2.05, 5.75), Vector2(3.05, 2.06), "res://assets/nasa/moon_surface/apollo11_regolith_closeup.jpg", false)
+	_make_visual_box("Medical photo panel surround", Vector3(-18.0, 2.05, -21.82), Vector3(4.1, 2.96, 0.08), Color("#394d55"))
+	var med_mural := _make_textured_screen("NASA ISS medical training photo mural", Vector3(-18.0, 2.05, -21.76), Vector2(3.8, 2.66), "res://assets/nasa/iss065e074846.jpg", false)
 	med_mural.rotation.y = 0.0
 
 
@@ -807,7 +820,7 @@ func _build_hud() -> void:
 	layer.add_child(title)
 	room_label = _make_label("AREA  /  MAIN ROOM", Vector2(22, 43), 13, Color("#ffffff"))
 	layer.add_child(room_label)
-	var objective := _make_label("Follow the lunar beacons around the Moon and return to the airlock  /  ESC to release cursor", Vector2(22, 65), 11, Color("#b4c7ca"))
+	var objective := _make_label("Walk the habitat and lunar surface  /  TAB: mission control  /  ESC: release cursor", Vector2(22, 65), 11, Color("#b4c7ca"))
 	layer.add_child(objective)
 	var controls := _make_label("MOVE  WASD / ARROWS      JUMP  SPACE      LOOK  MOUSE", Vector2.ZERO, 11, Color("#d3e3e4"))
 	controls.anchor_top = 1.0
