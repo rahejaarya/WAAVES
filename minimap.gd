@@ -15,7 +15,7 @@ const ROOMS := [
 	{"id": "restroom", "label": "RESTROOM", "center": Vector2(18, -16), "size": Vector2(12, 12)},
 	{"id": "lab", "label": "LAB", "center": Vector2(-18, 0), "size": Vector2(12, 12)},
 	{"id": "main", "label": "MAIN", "center": Vector2(0, 0), "size": Vector2(16, 12)},
-	{"id": "sleep", "label": "SLEEP", "center": Vector2(18, 0), "size": Vector2(12, 12)},
+	{"id": "sleep", "label": "CREW", "center": Vector2(18, 0), "size": Vector2(12, 12)},
 	{"id": "airlock", "label": "AIRLOCK", "center": Vector2(0, 13), "size": Vector2(8, 8)},
 	{"id": "outside", "label": "OUTSIDE", "center": Vector2(0, 29), "size": Vector2(34, 34)}
 ]

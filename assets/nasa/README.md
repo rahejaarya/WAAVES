@@ -13,3 +13,25 @@ have been decoded into standard GLB geometry for Godot 4.7.
 The model is used as a visual reference structure on the exterior landing pad.
 The interior room plan and furnishings remain WAAVES project content. NASA's
 model is a concept demonstrator, not a flight configuration.
+
+## Lunar surface imagery and Moon model
+
+`moon_surface/moon_small.glb` is NASA Goddard Scientific Visualization Studio's
+Moon model built with imagery and topographic data from the Lunar Reconnaissance
+Orbiter. It is used at an intentionally enlarged local scale as the terrain and
+horizon for this playable prototype.
+
+- NASA SVS model page and downloads: https://svs.gsfc.nasa.gov/14959/
+- `apollo11_regolith_closeup.jpg`: Apollo 11 surface photograph used as a
+  texture reference for the landing apron. Source: NASA Image and Video Library,
+  image AS11-40-5877.
+- `apollo17_station6_panorama.jpg`: Apollo 17 Station 6 panorama, included as a
+  visual reference. Source: NASA Johnson Space Center, image JSC2004E52779.
+- `apollo_moon_surface_nasa.jpg` and `lro_lunar_color_mosaic.jpg`: NASA lunar
+  surface and LRO color-mosaic reference images used on in-game instrument
+  displays.
+- NASA image and media usage guidance: https://www.nasa.gov/nasa-brand-center/images-and-media/
+
+NASA-derived assets are credited here. Their use does not imply NASA endorsement
+of the WAAVES project. The walkable habitat interior is a student concept; it is
+informed by NASA reference studies, not a build-to-print or flight-accurate design.

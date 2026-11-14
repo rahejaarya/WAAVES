@@ -76,13 +76,9 @@ func _unhandled_input(event: InputEvent) -> void:
 func _build_environment() -> void:
 	var world_environment := WorldEnvironment.new()
 	var environment := Environment.new()
-	environment.background_mode = Environment.BG_SKY
-	var sky := Sky.new()
-	var panorama := PanoramaSkyMaterial.new()
-	panorama.panorama = load("res://assets/nasa/moon_surface/apollo17_station6_panorama.jpg") as Texture2D
-	panorama.filter = PanoramaSkyMaterial.FILTER_LINEAR
-	sky.sky_material = panorama
-	environment.sky = sky
+	# The lunar exterior has no blue atmospheric sky; let the LRO globe define the horizon.
+	environment.background_mode = Environment.BG_COLOR
+	environment.background_color = Color("#02050a")
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color("#bbc5ce")
 	environment.ambient_light_energy = 0.28
@@ -292,48 +288,94 @@ func _build_corridor_shell(first: Dictionary, second: Dictionary, center: Vector
 
 
 func _build_outside() -> void:
+	_add_lro_moon_surface()
 	var outside_center := Vector3(0, -0.17, 29)
 	var surface := StaticBody3D.new()
-	surface.name = "Outside Landing Area"
+	surface.name = "Dust covered landing apron"
 	surface.position = outside_center
 	var disc_mesh := CylinderMesh.new()
-	disc_mesh.top_radius = 17.0
-	disc_mesh.bottom_radius = 17.0
-	disc_mesh.height = 0.34
-	disc_mesh.radial_segments = 40
+	disc_mesh.top_radius = 12.0
+	disc_mesh.bottom_radius = 12.4
+	disc_mesh.height = 0.18
+	disc_mesh.radial_segments = 72
 	var disc_instance := MeshInstance3D.new()
 	disc_instance.mesh = disc_mesh
-	disc_instance.material_override = _material(Color("#505147"))
+	var regolith_material := StandardMaterial3D.new()
+	regolith_material.albedo_color = Color("#98958d")
+	regolith_material.albedo_texture = load("res://assets/nasa/moon_surface/apollo11_regolith_closeup.jpg") as Texture2D
+	regolith_material.uv1_scale = Vector3(4.0, 4.0, 1.0)
+	regolith_material.roughness = 1.0
+	regolith_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	disc_instance.material_override = regolith_material
 	surface.add_child(disc_instance)
 	var disc_shape := CollisionShape3D.new()
 	var cylinder := CylinderShape3D.new()
-	cylinder.radius = 17.0
-	cylinder.height = 0.34
+	cylinder.radius = 12.0
+	cylinder.height = 0.18
 	disc_shape.shape = cylinder
 	surface.add_child(disc_shape)
 	world_root.add_child(surface)
 
-	# A low safety rail surrounds the outside pad, with a clear gap back to the airlock.
-	for index in range(56):
-		var angle := TAU * float(index) / 56.0
-		if absf(wrapf(angle - PI, -PI, PI)) < 0.34:
-			continue
-		var rail_position := Vector3(sin(angle) * 16.7, 0.27, 29.0 + cos(angle) * 16.7)
-		_make_box(world_root, "Outside safety rail", rail_position, Vector3(1.25, 0.54, 0.24), Color("#66746d"), angle)
-
 	_add_nasa_habitat_model()
 	_add_solar_panels()
 	_add_satellite_dish()
+	_add_lunar_surface_rocks()
+
+
+func _add_lro_moon_surface() -> void:
+	# NASA SVS Moon model uses imagery and topography from the Lunar Reconnaissance Orbiter.
+	var moon_scene := load("res://assets/nasa/moon_surface/moon_small.glb") as PackedScene
+	if moon_scene == null:
+		push_warning("NASA LRO Moon surface model could not be loaded.")
+		return
+	var globe_radius := 11447.0 # Authored scale: model radius 1.2719 units, scaled by 9,000.
+	var moon := moon_scene.instantiate()
+	moon.name = "NASA LRO textured lunar surface"
+	moon.scale = Vector3.ONE * 9000.0
+	moon.position = Vector3(0, -globe_radius, 0)
+	world_root.add_child(moon)
+
+
+func _add_lunar_surface_rocks() -> void:
+	# Keep a clear path from the airlock; low, irregular rocks sit around the playable apron.
+	var rock_sites: Array[Vector3] = [
+		Vector3(-15.5, -0.08, 23.5), Vector3(15.0, -0.08, 22.5),
+		Vector3(-16.0, -0.08, 36.0), Vector3(15.5, -0.08, 39.0),
+		Vector3(-11.5, -0.08, 45.0), Vector3(10.5, -0.08, 45.5)
+	]
+	for index in range(rock_sites.size()):
+		var rock_body := StaticBody3D.new()
+		rock_body.name = "Lunar boulder %02d" % index
+		var rock := MeshInstance3D.new()
+		rock.name = "Irregular lunar boulder mesh"
+		var mesh := SphereMesh.new()
+		mesh.radius = 1.0
+		mesh.height = 1.6
+		mesh.radial_segments = 12
+		mesh.rings = 6
+		rock.mesh = mesh
+		var scale_factor := 0.55 + float(index % 3) * 0.22
+		rock.scale = Vector3(scale_factor * 1.3, scale_factor * 0.72, scale_factor)
+		rock.rotation = Vector3(0.18 * float(index), 0.63 * float(index), 0.11 * float(index))
+		rock.material_override = _material(Color("#77736d"))
+		rock_body.position = rock_sites[index]
+		rock_body.add_child(rock)
+		var boulder_collision := CollisionShape3D.new()
+		var boulder_shape := SphereShape3D.new()
+		boulder_shape.radius = scale_factor * 0.8
+		boulder_collision.shape = boulder_shape
+		rock_body.add_child(boulder_collision)
+		world_root.add_child(rock_body)
 
 
 func _add_nasa_habitat_model() -> void:
 	# Official NASA/LaRC HDU reference model, assembled from its two published GLB parts.
 	var model_body := StaticBody3D.new()
 	model_body.name = "NASA Habitat Demonstration Unit reference model"
-	model_body.position = Vector3(8.0, 4.0, 35.0)
+	model_body.position = Vector3(8.0, 2.7, 35.0)
 	var body_collision := CollisionShape3D.new()
 	var body_shape := BoxShape3D.new()
-	body_shape.size = Vector3(12.2, 8.7, 7.5)
+	body_shape.size = Vector3(12.2, 5.4, 7.5)
 	body_collision.shape = body_shape
 	model_body.add_child(body_collision)
 	for model_path: String in ["res://assets/nasa/habitat-demonstration-unit-part-1.glb", "res://assets/nasa/habitat-demonstration-unit-part-2.glb"]:
@@ -360,18 +402,67 @@ func _add_solar_panels() -> void:
 
 
 func _add_satellite_dish() -> void:
-	_make_visual_box("Satellite dish support", Vector3(-10.0, 0.72, 35.0), Vector3(0.22, 1.4, 0.22), Color("#aab5b2"))
-	var dish_mesh := SphereMesh.new()
-	dish_mesh.radius = 0.95
-	dish_mesh.height = 0.32
+	var base := _make_box(world_root, "Communications antenna footing", Vector3(-10.0, 0.12, 35.0), Vector3(2.3, 0.24, 2.3), Color("#757e7c"))
+	base.position.y = -0.035
+	var mount := _make_box(world_root, "Antenna azimuth mount", Vector3(-10.0, 0.38, 35.0), Vector3(0.9, 0.34, 0.9), Color("#b8c2bf"))
+	var pedestal := _make_box(world_root, "Antenna mast", Vector3(-10.0, 1.25, 35.0), Vector3(0.22, 1.55, 0.22), Color("#aab5b2"))
+	_make_visual_strut("Antenna left brace", Vector3(-10.0, 0.72, 35.0), Vector3(-10.85, 0.24, 35.0), 0.09, Color("#87938f"))
+	_make_visual_strut("Antenna right brace", Vector3(-10.0, 0.72, 35.0), Vector3(-9.15, 0.24, 35.0), 0.09, Color("#87938f"))
+	_make_visual_strut("Antenna back brace", Vector3(-10.0, 0.72, 35.0), Vector3(-10.0, 0.24, 35.85), 0.09, Color("#87938f"))
+	_make_visual_strut("Antenna front brace", Vector3(-10.0, 0.72, 35.0), Vector3(-10.0, 0.24, 34.15), 0.09, Color("#87938f"))
+	var dish_assembly := StaticBody3D.new()
+	dish_assembly.name = "Directional lunar communications dish"
+	dish_assembly.position = Vector3(-10.0, 2.03, 35.0)
+	dish_assembly.rotation_degrees = Vector3(-48.0, 18.0, 0.0)
+	world_root.add_child(dish_assembly)
 	var dish := MeshInstance3D.new()
-	dish.name = "Satellite dish"
-	dish.mesh = dish_mesh
-	dish.scale = Vector3(1, 1, 0.72)
-	dish.position = Vector3(-10.0, 1.35, 35.0)
-	dish.material_override = _material(Color("#bdc8c1"))
-	world_root.add_child(dish)
-	_make_visual_box("Satellite receiver", Vector3(-10.0, 1.48, 35.0), Vector3(0.18, 0.18, 0.5), Color("#526c73"))
+	dish.name = "Parabolic reflector"
+	dish.mesh = _make_parabolic_dish_mesh(1.2, 0.42, 24, 64)
+	var reflector_material := StandardMaterial3D.new()
+	reflector_material.albedo_color = Color("#bfc9c6")
+	reflector_material.metallic = 0.58
+	reflector_material.roughness = 0.28
+	reflector_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	dish.material_override = reflector_material
+	dish_assembly.add_child(dish)
+	var dish_collision := CollisionShape3D.new()
+	dish_collision.shape = dish.mesh.create_trimesh_shape()
+	dish_assembly.add_child(dish_collision)
+	# A feed horn sits at the dish focus and is held clear of the reflecting bowl.
+	_make_visual_strut("Antenna feed support A", Vector3(-0.72, 0.0, 0.0), Vector3(0.0, 0.0, 0.33), 0.035, Color("#889592"), dish_assembly)
+	_make_visual_strut("Antenna feed support B", Vector3(0.72, 0.0, 0.0), Vector3(0.0, 0.0, 0.33), 0.035, Color("#889592"), dish_assembly)
+	_make_visual_strut("Antenna feed support C", Vector3(0.0, -0.72, 0.0), Vector3(0.0, 0.0, 0.33), 0.035, Color("#889592"), dish_assembly)
+	var feed := _make_visual_cylinder("Dish feed horn", Vector3(0.0, 0.0, 0.34), 0.14, 0.36, Color("#687c80"), dish_assembly)
+	feed.rotation.x = PI * 0.5
+	var radome := _make_visual_sphere("Feed radome", Vector3(0.0, 0.0, 0.48), 0.19, Color("#d7dfdc"), dish_assembly)
+	radome.scale = Vector3(1.0, 1.0, 0.65)
+	# A small solar-battery and control cabinet makes the surface antenna self-contained.
+	_make_box(world_root, "Antenna power and control unit", Vector3(-12.0, 0.82, 35.0), Vector3(1.2, 1.45, 1.0), Color("#6b7f81"))
+	_make_emissive_box("Antenna telemetry display", Vector3(-12.62, 1.05, 35.0), Vector3(0.04, 0.52, 0.58), Color("#63ccd0"), 0.35)
+	# Keep locals referenced while documenting that these structures are collidable.
+	if not is_instance_valid(mount) or not is_instance_valid(pedestal):
+		push_warning("Communications antenna structure was not created.")
+
+
+func _make_parabolic_dish_mesh(radius: float, depth: float, rings: int, segments: int) -> ArrayMesh:
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var focus := radius * radius / (4.0 * depth)
+	for ring_index in range(rings):
+		var inner_radius := radius * float(ring_index) / float(rings)
+		var outer_radius := radius * float(ring_index + 1) / float(rings)
+		for segment_index in range(segments):
+			var angle_a := TAU * float(segment_index) / float(segments)
+			var angle_b := TAU * float(segment_index + 1) / float(segments)
+			var a0 := Vector3(inner_radius * cos(angle_a), inner_radius * sin(angle_a), -inner_radius * inner_radius / (4.0 * focus))
+			var a1 := Vector3(outer_radius * cos(angle_a), outer_radius * sin(angle_a), -outer_radius * outer_radius / (4.0 * focus))
+			var b0 := Vector3(inner_radius * cos(angle_b), inner_radius * sin(angle_b), -inner_radius * inner_radius / (4.0 * focus))
+			var b1 := Vector3(outer_radius * cos(angle_b), outer_radius * sin(angle_b), -outer_radius * outer_radius / (4.0 * focus))
+			for point: Vector3 in [a0, b0, a1, b0, b1, a1]:
+				surface.set_uv(Vector2(point.x / (radius * 2.0) + 0.5, point.y / (radius * 2.0) + 0.5))
+				surface.add_vertex(point)
+	surface.generate_normals()
+	return surface.commit()
 
 
 func _add_room_props() -> void:
@@ -382,99 +473,122 @@ func _add_room_props() -> void:
 	_add_main_room_props()
 	_add_sleeping_room_props()
 	_add_airlock_props()
-	for x_position: float in [-3.6, 0.0, 3.6]:
-		_make_visual_box("Garden planter", Vector3(x_position, 0.22, -28.0), Vector3(1.45, 0.42, 1.5), Color("#655744"))
-		_make_visual_sphere("Garden plant", Vector3(x_position, 0.95, -28.0), 0.72, Color("#7fa777"))
+	_add_plant_growth_room_props()
+
+
+func _add_plant_growth_room_props() -> void:
+	# Veggie-inspired controlled environment racks with plant pillows and overhead LEDs.
+	for rack_x: float in [-3.25, 3.25]:
+		_make_solid_box("Plant growth rack cabinet", Vector3(rack_x, 1.45, -28.0), Vector3(3.1, 2.8, 0.82), Color("#526b70"))
+		for shelf: int in range(3):
+			var shelf_y := 0.72 + float(shelf) * 0.78
+			_make_solid_box("Hydroponic grow tray", Vector3(rack_x, shelf_y, -27.65), Vector3(2.55, 0.18, 0.56), Color("#384b43"))
+			_make_emissive_box("Plant growth LED bank", Vector3(rack_x, shelf_y + 0.52, -27.65), Vector3(2.3, 0.055, 0.24), Color("#e7a2d9"), 0.24)
+			for plant: int in range(4):
+				var plant_x := rack_x - 0.9 + float(plant) * 0.6
+				_make_visual_cylinder("Sealed root pillow", Vector3(plant_x, shelf_y + 0.21, -27.65), 0.16, 0.19, Color("#746b57"))
+				_make_visual_strut("Lettuce stem", Vector3(plant_x, shelf_y + 0.28, -27.65), Vector3(plant_x, shelf_y + 0.58, -27.65), 0.045, Color("#72a878"))
+				for leaf_side: float in [-1.0, 1.0]:
+					var leaf := _make_visual_sphere("Lettuce leaf", Vector3(plant_x + leaf_side * 0.13, shelf_y + 0.47, -27.65), 0.15, Color("#81bd7c"))
+					leaf.scale = Vector3(1.0, 0.55, 0.72)
+	_make_solid_box("Garden nutrient and water service unit", Vector3(0.0, 1.15, -31.45), Vector3(3.2, 2.2, 0.8), Color("#7b8b84"))
+	_make_textured_screen("Plant growth monitoring display", Vector3(0.0, 1.52, -31.02), Vector2(1.24, 0.72), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
 
 
 func _add_med_bay_props() -> void:
-	for bed_index in range(2):
-		var bed_z := -18.5 + float(bed_index) * 5.0
-		_make_solid_box("Medical bed frame", Vector3(-21.5, 0.38, bed_z), Vector3(2.35, 0.52, 3.4), Color("#aab8bb"))
-		_make_visual_box("Medical mattress", Vector3(-21.5, 0.69, bed_z), Vector3(2.22, 0.14, 3.27), Color("#d2dcda"))
-		_make_visual_box("Medical pillow", Vector3(-21.5, 0.83, bed_z - 1.22), Vector3(1.45, 0.18, 0.72), Color("#71b8c0"))
-		_make_visual_box("Bedside monitor", Vector3(-19.85, 1.32, bed_z - 1.0), Vector3(0.8, 1.35, 0.65), Color("#536b75"))
-		_make_visual_box("Bed monitor display", Vector3(-19.46, 1.45, bed_z - 1.0), Vector3(0.035, 0.56, 0.43), Color("#62d5d5"))
-	_make_solid_box("Specimen diagnostic analyzer", Vector3(-13.7, 0.85, -19.6), Vector3(2.2, 1.7, 1.35), Color("#87999a"))
-	_make_visual_box("Diagnostic screen", Vector3(-14.15, 1.56, -18.9), Vector3(0.9, 0.64, 0.08), Color("#62d5d5"))
+	# NASA's reference layout calls for one stowable medical stretcher with a private exam area.
+	_make_solid_box("Stowable medical stretcher frame", Vector3(-21.3, 0.37, -17.0), Vector3(2.25, 0.48, 3.25), Color("#aab8bb"))
+	_make_visual_box("Medical stretcher mattress", Vector3(-21.3, 0.65, -17.0), Vector3(2.12, 0.14, 3.1), Color("#d2dcda"))
+	_make_visual_box("Medical stretcher pillow", Vector3(-21.3, 0.8, -18.17), Vector3(1.42, 0.18, 0.68), Color("#71b8c0"))
+	_make_visual_box("Medical privacy screen rail", Vector3(-21.3, 2.65, -17.0), Vector3(3.5, 0.08, 4.6), Color("#8c9b99"))
+	for side: float in [-1.0, 1.0]:
+		_make_visual_box("Medical privacy curtain", Vector3(-21.3 + side * 1.68, 1.78, -17.0), Vector3(0.055, 1.75, 4.35), Color("#9ab6b4"))
+	_make_solid_box("Specimen diagnostic analyzer", Vector3(-14.2, 0.82, -18.7), Vector3(2.1, 1.64, 1.35), Color("#87999a"))
+	_make_visual_box("Diagnostic screen bezel", Vector3(-14.2, 1.67, -18.0), Vector3(1.12, 0.84, 0.16), Color("#354850"))
+	_make_textured_screen("Diagnostic lunar specimen scan", Vector3(-14.2, 1.67, -18.085), Vector2(0.94, 0.62), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
 	for shelf_level in range(3):
-		_make_visual_box("Surgical supply shelf", Vector3(-23.0, 0.55 + float(shelf_level) * 0.63, -11.4), Vector3(3.7, 0.13, 0.72), Color("#71858a"))
+		_make_solid_box("Surgical supply shelf", Vector3(-22.4, 0.55 + float(shelf_level) * 0.72, -11.2), Vector3(3.7, 0.14, 0.72), Color("#71858a"))
 	for kit_index in range(3):
-		_make_visual_box("First aid kit", Vector3(-22.0 + float(kit_index) * 1.05, 0.93, -11.4), Vector3(0.72, 0.45, 0.52), Color("#d3e0dc"))
-		_make_visual_box("First aid marking", Vector3(-22.0 + float(kit_index) * 1.05, 1.17, -11.4), Vector3(0.3, 0.045, 0.08), Color("#d45e58"))
+		_make_solid_box("First aid kit", Vector3(-23.3 + float(kit_index) * 0.92, 1.03, -11.2), Vector3(0.66, 0.44, 0.5), Color("#d3e0dc"))
+		_make_visual_box("First aid marking", Vector3(-23.3 + float(kit_index) * 0.92, 1.26, -11.2), Vector3(0.28, 0.045, 0.08), Color("#d45e58"))
 	_make_solid_box("Life support cabinet", Vector3(-13.5, 1.15, -12.0), Vector3(2.0, 2.25, 1.4), Color("#687e82"))
 	_make_visual_box("Life support status panel", Vector3(-13.5, 1.35, -11.27), Vector3(1.15, 0.58, 0.06), Color("#66d1c7"))
 
 
 func _add_dining_props() -> void:
-	for table_position: Vector2 in [Vector2(-4.4, -18.5), Vector2(4.4, -18.5), Vector2(-4.4, -13.5), Vector2(4.4, -13.5)]:
-		var x := table_position.x
-		var z := table_position.y
-		_make_solid_box("Cafeteria table", Vector3(x, 0.92, z), Vector3(3.1, 0.18, 2.0), Color("#74888a"))
-		for leg_x: float in [-1.25, 1.25]:
-			for leg_z: float in [-0.72, 0.72]:
-				_make_visual_box("Table leg", Vector3(x + leg_x, 0.45, z + leg_z), Vector3(0.12, 0.9, 0.12), Color("#829396"))
-		for seat_offset: float in [-1.0, 1.0]:
-			_make_solid_box("Dining bench", Vector3(x + seat_offset * 2.05, 0.5, z), Vector3(0.72, 0.82, 1.5), Color("#506a72"))
-		for place_offset: float in [-0.52, 0.52]:
-			_make_visual_box("Packaged meal", Vector3(x + place_offset, 1.08, z - 0.35), Vector3(0.36, 0.18, 0.3), Color("#d2a66b"))
-			_make_visual_box("Fork", Vector3(x + place_offset - 0.34, 1.04, z + 0.3), Vector3(0.06, 0.035, 0.42), Color("#c9d4d4"))
-			_make_visual_box("Spoon", Vector3(x + place_offset, 1.04, z + 0.3), Vector3(0.07, 0.035, 0.42), Color("#c9d4d4"))
-			_make_visual_box("Knife", Vector3(x + place_offset + 0.34, 1.04, z + 0.3), Vector3(0.06, 0.035, 0.42), Color("#c9d4d4"))
-	for level in range(3):
-		_make_solid_box("Cafeteria food shelf", Vector3(6.2, 0.55 + float(level) * 0.72, -11.8), Vector3(2.5, 0.14, 0.72), Color("#71858a"))
-	for item in range(4):
-		_make_visual_box("Packaged food storage", Vector3(5.3 + float(item % 2) * 0.8, 0.94 + float(item / 2) * 0.72, -11.8), Vector3(0.55, 0.42, 0.5), Color("#d1a66c"))
+	# One shared ward table plus a wall galley, keeping a straight route to the garden and adjacent rooms.
+	_make_solid_box("Wardroom table pedestal", Vector3(0.0, 0.48, -15.8), Vector3(0.52, 0.92, 0.52), Color("#66777b"))
+	_make_solid_box("Wardroom table", Vector3(0.0, 0.98, -15.8), Vector3(3.3, 0.16, 1.55), Color("#c3cbc5"))
+	for seat_x: float in [-1.25, 1.25]:
+		_make_solid_box("Wardroom seat", Vector3(seat_x, 0.47, -17.15), Vector3(0.92, 0.82, 0.78), Color("#546a70"))
+		_make_solid_box("Wardroom seat", Vector3(seat_x, 0.47, -14.45), Vector3(0.92, 0.82, 0.78), Color("#546a70"))
+	for place_x: float in [-1.05, 1.05]:
+		_make_visual_box("Meal pouch", Vector3(place_x, 1.12, -15.8), Vector3(0.42, 0.16, 0.36), Color("#c99b64"))
+	for counter_x: float in [-4.8, -1.6, 1.6, 4.8]:
+		_make_solid_box("Galley lower cabinet", Vector3(counter_x, 0.58, -20.55), Vector3(2.75, 1.1, 1.05), Color("#718084"))
+		_make_visual_box("Galley cabinet door", Vector3(counter_x, 0.58, -19.99), Vector3(2.48, 0.78, 0.05), Color("#8f9d9a"))
+	_make_solid_box("Galley food preparation surface", Vector3(0.0, 1.18, -20.55), Vector3(12.8, 0.16, 1.18), Color("#c4cbc4"))
+	for shelf_level in range(2):
+		_make_solid_box("Galley overhead locker", Vector3(0.0, 2.15 + float(shelf_level) * 0.72, -21.45), Vector3(11.2, 0.58, 0.58), Color("#75888a"))
+	for item in range(8):
+		var food_x := -4.0 + float(item) * 1.1
+		_make_solid_box("Secured packaged food bin", Vector3(food_x, 1.52, -20.45), Vector3(0.68, 0.45, 0.55), Color("#c9a270"))
+		_make_visual_box("Food bin latch", Vector3(food_x, 1.52, -20.14), Vector3(0.18, 0.16, 0.035), Color("#506a70"))
 
 
 func _add_restroom_props() -> void:
-	_make_solid_box("Suction toilet base", Vector3(21.5, 0.42, -19.0), Vector3(1.5, 0.72, 1.9), Color("#c2ceca"))
-	_make_visual_sphere("Suction toilet bowl", Vector3(21.5, 0.82, -19.0), 0.72, Color("#e0e7e3"))
-	_make_visual_box("Toilet foot restraints", Vector3(21.5, 1.15, -19.65), Vector3(1.4, 0.12, 0.22), Color("#778b8e"))
-	_make_solid_box("Air suction unit", Vector3(23.3, 1.45, -19.0), Vector3(1.25, 2.6, 1.1), Color("#657c83"))
-	_make_visual_box("Air suction grille", Vector3(22.66, 1.65, -19.0), Vector3(0.055, 0.85, 0.72), Color("#79d1d0"))
-	_make_solid_box("Sponge bath bench", Vector3(21.5, 0.55, -12.3), Vector3(3.5, 0.42, 1.35), Color("#657c83"))
-	_make_visual_box("Bath privacy panel", Vector3(24.0, 1.25, -12.3), Vector3(0.12, 2.5, 3.0), Color("#93a9a5"))
-	_make_solid_box("Wet wipes cabinet", Vector3(14.2, 1.1, -12.0), Vector3(1.65, 2.1, 1.2), Color("#75898b"))
+	# Separate toilet and wash stations with a privacy divider and recognizable fixtures.
+	_make_solid_box("Vacuum toilet housing", Vector3(21.5, 0.5, -19.2), Vector3(1.45, 0.72, 1.65), Color("#d7dedb"))
+	_make_visual_sphere("Vacuum toilet seat", Vector3(21.5, 0.89, -19.2), 0.55, Color("#f0f1e9"))
+	_make_visual_box("Toilet foot restraints", Vector3(21.5, 1.03, -19.82), Vector3(1.22, 0.12, 0.18), Color("#778b8e"))
+	_make_solid_box("Vacuum and waste service panel", Vector3(23.3, 1.35, -19.2), Vector3(1.3, 2.55, 1.0), Color("#71848a"))
+	_make_visual_box("Toilet airflow grille", Vector3(22.62, 1.58, -19.2), Vector3(0.05, 0.8, 0.64), Color("#a9c6c2"))
+	_make_visual_box("Toilet flush control", Vector3(22.61, 2.32, -19.2), Vector3(0.06, 0.3, 0.42), Color("#6acbc4"))
+	_make_visual_box("Privacy partition", Vector3(18.0, 1.55, -16.2), Vector3(0.12, 3.0, 3.0), Color("#879997"))
+	_make_solid_box("Sponge bath wash bench", Vector3(21.5, 0.55, -12.6), Vector3(3.4, 0.42, 1.25), Color("#bbc7c2"))
+	_make_solid_box("Wash station cabinet", Vector3(21.5, 1.25, -11.2), Vector3(3.3, 2.3, 0.72), Color("#829494"))
+	_make_visual_box("Wash station mirror", Vector3(21.5, 2.25, -11.57), Vector3(2.1, 0.92, 0.04), Color("#8faeaf"))
+	_make_solid_box("Hygiene supplies locker", Vector3(14.5, 1.1, -12.0), Vector3(1.25, 2.1, 1.0), Color("#75898b"))
 	for pack in range(3):
-		_make_visual_box("Wet wipes pack", Vector3(14.2, 2.25, -12.65 + float(pack) * 0.48), Vector3(0.85, 0.34, 0.36), Color("#8ed0c8"))
+		_make_solid_box("Secured hygiene wipe pack", Vector3(14.5, 0.65 + float(pack) * 0.52, -11.32), Vector3(0.74, 0.34, 0.24), Color("#9dc8c2"))
 
 
 func _add_lab_props() -> void:
+	# A central aisle connects both bulkhead doors; bench equipment is visibly lab-specific.
 	for bench_z: float in [-4.0, 4.0]:
-		_make_solid_box("Laboratory workbench", Vector3(-18.0, 0.92, bench_z), Vector3(7.0, 0.18, 1.5), Color("#74758a"))
+		_make_solid_box("Laboratory instrument bench", Vector3(-18.0, 0.92, bench_z), Vector3(7.0, 0.18, 1.5), Color("#7e8e8d"))
 		for leg_x: float in [-3.0, 3.0]:
-			_make_visual_box("Lab bench leg", Vector3(-18.0 + leg_x, 0.45, bench_z), Vector3(0.16, 0.9, 1.25), Color("#66717b"))
-	for microscope_x: float in [-20.2, -18.0, -15.8]:
-		_make_visual_box("Microscope base", Vector3(microscope_x, 1.08, -3.8), Vector3(0.9, 0.12, 0.62), Color("#bcc7c4"))
-		_make_visual_box("Microscope stem", Vector3(microscope_x, 1.52, -3.8), Vector3(0.14, 0.82, 0.16), Color("#aab8b8"))
-		_make_visual_box("Microscope eyepiece", Vector3(microscope_x, 1.94, -3.54), Vector3(0.22, 0.14, 0.52), Color("#536c78"))
+			_make_solid_box("Bench pedestal", Vector3(-18.0 + leg_x, 0.45, bench_z), Vector3(0.34, 0.9, 1.25), Color("#66777a"))
+	for microscope_x: float in [-20.0, -16.0]:
+		_make_visual_box("Microscope weighted base", Vector3(microscope_x, 1.08, -3.8), Vector3(0.85, 0.12, 0.62), Color("#c6d0cc"))
+		_make_visual_strut("Microscope angled arm", Vector3(microscope_x, 1.12, -3.8), Vector3(microscope_x, 1.85, -3.55), 0.09, Color("#aebcb8"))
+		_make_visual_cylinder("Microscope eyepiece tube", Vector3(microscope_x, 1.92, -3.47), 0.1, 0.42, Color("#4f6872"))
+		_make_visual_box("Microscope stage", Vector3(microscope_x, 1.34, -3.68), Vector3(0.52, 0.09, 0.42), Color("#7f9290"))
 	for sample_x: float in [-20.8, -19.5, -16.5, -15.2]:
-		_make_visual_cylinder("Lunar dust sample jar", Vector3(sample_x, 1.27, 4.0), 0.27, 0.58, Color("#b7b99b"))
-		_make_visual_cylinder("Sample jar cap", Vector3(sample_x, 1.59, 4.0), 0.3, 0.1, Color("#667982"))
-	_make_solid_box("Moonquake seismometer pedestal", Vector3(-18.0, 0.38, 0.0), Vector3(2.7, 0.7, 2.7), Color("#64747d"))
-	_make_visual_box("Seismometer instrument", Vector3(-18.0, 1.12, 0.0), Vector3(1.55, 0.85, 1.5), Color("#a5b0aa"))
-	_make_visual_box("Seismometer display", Vector3(-18.0, 1.62, -0.76), Vector3(0.82, 0.42, 0.06), Color("#69d4c6"))
-	for gear_index in range(4):
-		_make_visual_box("Lab equipment case", Vector3(-21.0 + float(gear_index) * 2.0, 1.24, -4.0), Vector3(0.82, 0.46, 0.7), Color("#89999c"))
+		_make_visual_cylinder("Sealed lunar dust sample canister", Vector3(sample_x, 1.27, 4.0), 0.27, 0.58, Color("#b7b99b"))
+		_make_visual_cylinder("Sample canister locking cap", Vector3(sample_x, 1.59, 4.0), 0.3, 0.1, Color("#667982"))
+	_make_solid_box("Seismometer isolation plinth", Vector3(-18.0, 0.18, 0.0), Vector3(2.7, 0.32, 2.7), Color("#626e71"))
+	_make_solid_box("Moonquake seismometer", Vector3(-18.0, 0.8, 0.0), Vector3(1.8, 0.92, 1.7), Color("#aeb8b4"))
+	_make_visual_box("Seismometer readout", Vector3(-18.0, 1.12, -0.86), Vector3(0.92, 0.42, 0.045), Color("#17343c"))
+	_make_textured_screen("Moonquake waveform display", Vector3(-18.0, 1.12, -0.888), Vector2(0.82, 0.32), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
+	for case_index in range(4):
+		var case_x := -20.5 + float(case_index % 2) * 4.8
+		var case_z := 2.9 + float(case_index / 2) * 2.0
+		_make_solid_box("Instrument storage case", Vector3(case_x, 1.24, case_z), Vector3(1.1, 0.46, 0.75), Color("#849392"))
 
 
 func _add_main_room_props() -> void:
-	# A compact command console on the south bulkhead leaves the center open for crew movement.
+	# Three readable workstation desks, with flat picture screens, monitor stands and keyboards.
 	for console_index in range(3):
 		var console_x := -4.8 + float(console_index) * 4.8
-		_make_solid_box("Command console cabinet", Vector3(console_x, 0.53, 4.3), Vector3(2.8, 0.96, 1.12), Color("#718287"))
-		_make_capsule_visual("Rounded command console top", Vector3(console_x, 1.08, 4.2), Vector3(1.55, 0.4, 0.68), Color("#a6b5b1"))
-		_make_visual_box("Console instrument bezel", Vector3(console_x, 1.6, 3.78), Vector3(1.42, 0.94, 0.18), Color("#50616a"))
-		_make_emissive_box("Console display glass", Vector3(console_x, 1.61, 3.675), Vector3(1.18, 0.68, 0.025), Color("#54b8bd"), 0.35)
-		var screen_label := Label3D.new()
-		screen_label.name = "Console screen label"
-		screen_label.text = ["HABITAT OPS", "LIFE SUPPORT", "COMMS / NAV"][console_index]
-		screen_label.position = Vector3(console_x, 1.52, 3.65)
-		screen_label.font_size = 28
-		screen_label.pixel_size = 0.0028
-		screen_label.modulate = Color("#d9ffff")
-		world_root.add_child(screen_label)
+		_make_solid_box("Command workstation desk", Vector3(console_x, 0.72, 4.25), Vector3(3.25, 0.16, 1.15), Color("#8b9997"))
+		_make_solid_box("Workstation pedestal", Vector3(console_x, 0.34, 4.25), Vector3(0.62, 0.72, 0.82), Color("#66777b"))
+		_make_solid_box("Monitor stand", Vector3(console_x, 1.12, 3.93), Vector3(0.16, 0.72, 0.16), Color("#596d73"))
+		_make_solid_box("Monitor housing", Vector3(console_x, 1.76, 3.94), Vector3(1.72, 1.18, 0.2), Color("#3c4e54"))
+		_make_textured_screen("NASA reference data on workstation", Vector3(console_x, 1.76, 3.825), Vector2(1.48, 0.88), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
+		_make_visual_box("Workstation keyboard", Vector3(console_x, 0.84, 4.65), Vector3(0.92, 0.055, 0.3), Color("#394a50"))
+		_make_solid_box("Workstation compute unit", Vector3(console_x + 1.22, 1.18, 4.0), Vector3(0.42, 0.75, 0.58), Color("#596a6e"))
+		_make_visual_box("Compute unit status lights", Vector3(console_x + 1.22, 1.43, 3.696), Vector3(0.22, 0.07, 0.025), Color("#6acbc4"))
 	_make_solid_box("Main room life support cabinet", Vector3(6.55, 1.15, 2.8), Vector3(1.65, 2.3, 1.4), Color("#6e8386"))
 	_make_emissive_box("Air filter status screen", Vector3(5.7, 1.55, 2.8), Vector3(0.04, 0.58, 0.76), Color("#63d5dc"), 0.4)
 	for vent_row in range(4):
@@ -491,7 +605,7 @@ func _add_sleeping_room_props() -> void:
 		for post_x: float in [-1.3, 1.3]:
 			_make_visual_box("Bunk bed post", Vector3(bunk_x + post_x, 1.35, -1.1), Vector3(0.12, 2.7, 0.12), Color("#91a09e"))
 	for shelf_level in range(3):
-		_make_visual_box("Sleeping room shelf", Vector3(22.0, 0.55 + float(shelf_level) * 0.68, 4.0), Vector3(3.6, 0.14, 0.72), Color("#758589"))
+		_make_solid_box("Crew quarters stowage shelf", Vector3(22.0, 0.55 + float(shelf_level) * 0.68, 4.0), Vector3(3.6, 0.14, 0.72), Color("#758589"))
 	for storage in range(4):
 		_make_visual_box("Personal storage box", Vector3(20.7 + float(storage % 2) * 1.0, 0.9 + float(storage / 2) * 0.68, 4.0), Vector3(0.72, 0.46, 0.52), Color("#9aa8a3"))
 
@@ -507,7 +621,7 @@ func _add_airlock_props() -> void:
 	_make_visual_box("Airlock control lights", Vector3(2.83, 1.85, 13.0), Vector3(0.06, 0.62, 0.48), Color("#72d7bf"))
 
 
-func _make_visual_cylinder(cylinder_name: String, cylinder_position: Vector3, radius: float, height: float, color: Color) -> MeshInstance3D:
+func _make_visual_cylinder(cylinder_name: String, cylinder_position: Vector3, radius: float, height: float, color: Color, parent: Node3D = null) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.name = cylinder_name
 	var mesh := CylinderMesh.new()
@@ -517,7 +631,45 @@ func _make_visual_cylinder(cylinder_name: String, cylinder_position: Vector3, ra
 	instance.mesh = mesh
 	instance.position = cylinder_position
 	instance.material_override = _material(color)
+	(parent if parent != null else world_root).add_child(instance)
+	return instance
+
+
+func _make_textured_screen(screen_name: String, screen_position: Vector3, screen_size: Vector2, texture_path: String, emissive: bool) -> MeshInstance3D:
+	var instance := MeshInstance3D.new()
+	instance.name = screen_name
+	var screen_mesh := QuadMesh.new()
+	screen_mesh.size = screen_size
+	instance.mesh = screen_mesh
+	instance.position = screen_position
+	instance.rotation.y = PI
+	var screen_material := StandardMaterial3D.new()
+	screen_material.albedo_texture = load(texture_path) as Texture2D
+	screen_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	screen_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	if emissive:
+		screen_material.emission_enabled = true
+		screen_material.emission_texture = screen_material.albedo_texture
+		screen_material.emission_energy_multiplier = 0.32
+	instance.material_override = screen_material
 	world_root.add_child(instance)
+	return instance
+
+
+func _make_visual_strut(strut_name: String, start: Vector3, finish: Vector3, radius: float, color: Color, parent: Node3D = null) -> MeshInstance3D:
+	var direction := finish - start
+	var instance := MeshInstance3D.new()
+	instance.name = strut_name
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius * 0.82
+	mesh.bottom_radius = radius
+	mesh.height = direction.length()
+	mesh.radial_segments = 10
+	instance.mesh = mesh
+	instance.position = (start + finish) * 0.5
+	instance.quaternion = Quaternion(Vector3.UP, direction.normalized())
+	instance.material_override = _material(color)
+	(parent if parent != null else world_root).add_child(instance)
 	return instance
 
 
@@ -563,7 +715,7 @@ func _build_camera() -> void:
 	follow_camera.projection = Camera3D.PROJECTION_PERSPECTIVE
 	follow_camera.fov = 78.0
 	follow_camera.near = 0.1
-	follow_camera.far = 120.0
+	follow_camera.far = 800.0
 	follow_camera.position = Vector3(0, 1.56, 0)
 	player.add_child(follow_camera)
 	player.get_node("Astronaut").visible = false
@@ -673,7 +825,7 @@ func _make_visual_box(box_name: String, box_position: Vector3, box_size: Vector3
 	return instance
 
 
-func _make_visual_sphere(sphere_name: String, sphere_position: Vector3, radius: float, color: Color) -> MeshInstance3D:
+func _make_visual_sphere(sphere_name: String, sphere_position: Vector3, radius: float, color: Color, parent: Node3D = null) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.name = sphere_name
 	var mesh := SphereMesh.new()
@@ -682,7 +834,7 @@ func _make_visual_sphere(sphere_name: String, sphere_position: Vector3, radius: 
 	instance.mesh = mesh
 	instance.position = sphere_position
 	instance.material_override = _material(color)
-	world_root.add_child(instance)
+	(parent if parent != null else world_root).add_child(instance)
 	return instance
 
 
