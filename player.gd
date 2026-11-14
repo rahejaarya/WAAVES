@@ -18,15 +18,19 @@ func _input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var direction := Vector3.ZERO
+	var local_direction := Vector3.ZERO
 	if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT):
-		direction.x -= 1.0
+		local_direction.x -= 1.0
 	if Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT):
-		direction.x += 1.0
+		local_direction.x += 1.0
 	if Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP):
-		direction.z -= 1.0
+		local_direction.z -= 1.0
 	if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN):
-		direction.z += 1.0
+		local_direction.z += 1.0
+	if local_direction.length_squared() > 1.0:
+		local_direction = local_direction.normalized()
+	var direction := global_transform.basis * local_direction
+	direction.y = 0.0
 	if direction.length_squared() > 1.0:
 		direction = direction.normalized()
 
@@ -41,8 +45,8 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
-	if direction.length_squared() > 0.0:
-		var target_rotation := atan2(-direction.x, -direction.z)
+	if local_direction.length_squared() > 0.0:
+		var target_rotation := atan2(-local_direction.x, -local_direction.z)
 		astronaut.rotation.y = lerp_angle(astronaut.rotation.y, target_rotation, minf(delta * 10.0, 1.0))
 	if is_on_floor() and direction.length_squared() > 0.0:
 		walk_phase += delta * 12.0

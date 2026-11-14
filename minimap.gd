@@ -1,6 +1,6 @@
 extends Control
 
-const MAP_SCALE := 2.9
+const MAP_SCALE := 2.6
 const PANEL_COLOR := Color(0.025, 0.065, 0.085, 0.94)
 const ROOM_COLOR := Color(0.12, 0.23, 0.28, 0.98)
 const ROOM_OUTLINE := Color(0.38, 0.75, 0.79, 0.95)
@@ -17,7 +17,7 @@ const ROOMS := [
 	{"id": "main", "label": "MAIN", "center": Vector2(0, 0), "size": Vector2(16, 12)},
 	{"id": "sleep", "label": "SLEEP", "center": Vector2(18, 0), "size": Vector2(12, 12)},
 	{"id": "airlock", "label": "AIRLOCK", "center": Vector2(0, 13), "size": Vector2(8, 8)},
-	{"id": "outside", "label": "OUTSIDE", "center": Vector2(0, 29), "size": Vector2(24, 24)}
+	{"id": "outside", "label": "OUTSIDE", "center": Vector2(0, 29), "size": Vector2(34, 34)}
 ]
 
 const LINKS := [
@@ -45,7 +45,7 @@ func _draw() -> void:
 	draw_string(font, Vector2(12, 21), "HABITAT MAP", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#baf9f3"))
 	draw_line(Vector2(10, 29), Vector2(size.x - 10, 29), ROOM_OUTLINE, 1.0)
 
-	var map_center := Vector2(size.x * 0.5, size.y * 0.53)
+	var map_center := Vector2(size.x * 0.5, size.y * 0.5)
 	var points: Dictionary = {}
 	for room: Dictionary in ROOMS:
 		points[room["id"]] = _to_map(room["center"], map_center)
@@ -72,9 +72,9 @@ func _draw() -> void:
 			draw_string(font, Vector2(rect.position.x, center.y + 3), room["label"], HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 7, Color("#fff0a6") if is_current_room else Color("#e1f3f3"))
 
 	# Tiny outside markers mirror the solar panels and dish in the world.
-	var solar_left := _to_map(Vector2(-6.2, 27.0), map_center)
-	var solar_right := _to_map(Vector2(-2.4, 27.0), map_center)
-	var dish := _to_map(Vector2(6.0, 29.0), map_center)
+	var solar_left := _to_map(Vector2(-7.8, 27.0), map_center)
+	var solar_right := _to_map(Vector2(-4.2, 27.0), map_center)
+	var dish := _to_map(Vector2(-10.0, 35.0), map_center)
 	draw_rect(Rect2(solar_left - Vector2(4, 2), Vector2(8, 4)), Color("#52b9dc"), true)
 	draw_rect(Rect2(solar_right - Vector2(4, 2), Vector2(8, 4)), Color("#52b9dc"), true)
 	draw_circle(dish, 3.0, Color("#f0d68c"))
