@@ -3,9 +3,9 @@ extends Node3D
 const MinimapScript := preload("res://minimap.gd")
 
 const FLOOR_THICKNESS := 0.3
-const WALL_HEIGHT := 2.7
+const WALL_HEIGHT := 3.4
 const WALL_THICKNESS := 0.32
-const DOOR_WIDTH := 4.4
+const DOOR_WIDTH := 2.2
 
 const ROOMS := [
 	{"id": "main", "title": "MAIN ROOM", "center": Vector2(0, 0), "size": Vector2(16, 12), "doors": ["north", "east", "south", "west"], "floor": Color("#596462")},
@@ -14,7 +14,7 @@ const ROOMS := [
 	{"id": "med", "title": "MEDICAL BAY", "center": Vector2(-18, -16), "size": Vector2(12, 12), "doors": ["east", "south"], "floor": Color("#596564")},
 	{"id": "lab", "title": "LAB", "center": Vector2(-18, 0), "size": Vector2(12, 12), "doors": ["north", "east"], "floor": Color("#575861")},
 	{"id": "restroom", "title": "RESTROOM", "center": Vector2(18, -16), "size": Vector2(12, 12), "doors": ["west", "south"], "floor": Color("#5c6260")},
-	{"id": "sleep", "title": "SLEEPING ROOM", "center": Vector2(18, 0), "size": Vector2(12, 12), "doors": ["north", "west"], "floor": Color("#5b6065")},
+	{"id": "sleep", "title": "CREW QUARTERS", "center": Vector2(18, 0), "size": Vector2(12, 12), "doors": ["north", "west"], "floor": Color("#5b6065")},
 	{"id": "airlock", "title": "AIRLOCK", "center": Vector2(0, 13), "size": Vector2(8, 8), "doors": ["north", "south"], "floor": Color("#535c5d")}
 ]
 
@@ -38,8 +38,9 @@ var rooms_by_id: Dictionary = {}
 
 
 func _ready() -> void:
-	# Start facing the command console so first-person view opens on the room's focal point.
-	player.rotation.y = PI
+	# Spawn clear of furniture, facing into the open main deck.
+	player.position = Vector3(-2.0, 0.0, 0.0)
+	player.rotation.y = 0.0
 	for room: Dictionary in ROOMS:
 		rooms_by_id[room["id"]] = room
 	_build_environment()
@@ -75,18 +76,23 @@ func _unhandled_input(event: InputEvent) -> void:
 func _build_environment() -> void:
 	var world_environment := WorldEnvironment.new()
 	var environment := Environment.new()
-	environment.background_mode = Environment.BG_COLOR
-	environment.background_color = Color("#07121c")
+	environment.background_mode = Environment.BG_SKY
+	var sky := Sky.new()
+	var panorama := PanoramaSkyMaterial.new()
+	panorama.panorama = load("res://assets/nasa/moon_surface/apollo17_station6_panorama.jpg") as Texture2D
+	panorama.filter = PanoramaSkyMaterial.FILTER_LINEAR
+	sky.sky_material = panorama
+	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("#b7d2d8")
-	environment.ambient_light_energy = 0.8
+	environment.ambient_light_color = Color("#bbc5ce")
+	environment.ambient_light_energy = 0.28
 	world_environment.environment = environment
 	add_child(world_environment)
 
 	var key_light := DirectionalLight3D.new()
 	key_light.name = "Soft Station Light"
-	key_light.rotation_degrees = Vector3(-58, -28, 0)
-	key_light.light_energy = 1.25
+	key_light.rotation_degrees = Vector3(-38, -32, 0)
+	key_light.light_energy = 1.8
 	key_light.shadow_enabled = true
 	add_child(key_light)
 
@@ -180,20 +186,24 @@ func _build_door_threshold(room: Dictionary, side: String) -> void:
 		threshold_position.x -= room_size.x * 0.5
 		threshold_size = Vector3(0.13, 0.035, DOOR_WIDTH)
 	_make_visual_box(str(room["title"]) + " doorway marker", threshold_position, threshold_size, Color("#4f9b9f"))
-	var jamb_size := Vector3(0.18, 2.52, 0.28)
-	var lintel_size := Vector3(DOOR_WIDTH + 0.18, 0.18, 0.28)
+	var jamb_size := Vector3(0.28, WALL_HEIGHT - 0.16, 0.38)
+	var lintel_size := Vector3(DOOR_WIDTH + 0.16, 0.24, 0.38)
 	if side == "north" or side == "south":
 		var wall_z := center.y + (-room_size.y * 0.5 if side == "north" else room_size.y * 0.5)
 		for offset: float in [-1.0, 1.0]:
-			_make_visual_box(str(room["title"]) + " door jamb", Vector3(center.x + offset * DOOR_WIDTH * 0.5, 1.28, wall_z), jamb_size, Color("#63777b"))
-		_make_visual_box(str(room["title"]) + " door lintel", Vector3(center.x, 2.57, wall_z), lintel_size, Color("#63777b"))
+			_make_box(world_root, str(room["title"]) + " hatch jamb", Vector3(center.x + offset * DOOR_WIDTH * 0.5, WALL_HEIGHT * 0.5, wall_z), jamb_size, Color("#697a7b"))
+		_make_box(world_root, str(room["title"]) + " hatch lintel", Vector3(center.x, WALL_HEIGHT - 0.12, wall_z), lintel_size, Color("#697a7b"))
+		for offset: float in [-1.0, 1.0]:
+			_make_visual_box(str(room["title"]) + " hatch warning light", Vector3(center.x + offset * (DOOR_WIDTH * 0.5 + 0.34), WALL_HEIGHT - 0.32, wall_z), Vector3(0.12, 0.12, 0.08), Color("#d4b766"))
 	else:
 		var wall_x := center.x + (room_size.x * 0.5 if side == "east" else -room_size.x * 0.5)
-		jamb_size = Vector3(0.28, 2.52, 0.18)
-		lintel_size = Vector3(0.28, 0.18, DOOR_WIDTH + 0.18)
+		jamb_size = Vector3(0.38, WALL_HEIGHT - 0.16, 0.28)
+		lintel_size = Vector3(0.38, 0.24, DOOR_WIDTH + 0.16)
 		for offset: float in [-1.0, 1.0]:
-			_make_visual_box(str(room["title"]) + " door jamb", Vector3(wall_x, 1.28, center.y + offset * DOOR_WIDTH * 0.5), jamb_size, Color("#63777b"))
-		_make_visual_box(str(room["title"]) + " door lintel", Vector3(wall_x, 2.57, center.y), lintel_size, Color("#63777b"))
+			_make_box(world_root, str(room["title"]) + " hatch jamb", Vector3(wall_x, WALL_HEIGHT * 0.5, center.y + offset * DOOR_WIDTH * 0.5), jamb_size, Color("#697a7b"))
+		_make_box(world_root, str(room["title"]) + " hatch lintel", Vector3(wall_x, WALL_HEIGHT - 0.12, center.y), lintel_size, Color("#697a7b"))
+		for offset: float in [-1.0, 1.0]:
+			_make_visual_box(str(room["title"]) + " hatch warning light", Vector3(wall_x, WALL_HEIGHT - 0.32, center.y + offset * (DOOR_WIDTH * 0.5 + 0.34)), Vector3(0.08, 0.12, 0.12), Color("#d4b766"))
 
 
 func _build_wall(room: Dictionary, side: String, has_door: bool) -> void:
@@ -264,7 +274,21 @@ func _build_corridors() -> void:
 			Vector3(corridor_size.x, FLOOR_THICKNESS, corridor_size.y),
 			CORRIDOR_COLOR
 		)
-		_make_visual_box(str(first["title"]) + " corridor ceiling", Vector3(corridor_center.x, WALL_HEIGHT + 0.04, corridor_center.y), Vector3(corridor_size.x, 0.18, corridor_size.y), Color("#8e9b99"))
+		_build_corridor_shell(first, second, corridor_center, corridor_size)
+
+
+func _build_corridor_shell(first: Dictionary, second: Dictionary, center: Vector2, size: Vector2) -> void:
+	# A continuous pressure-hull tunnel connects each doorway; its side walls overlap
+	# the room bulkheads slightly so there are no gaps at either end.
+	var overlap := 0.34
+	if size.x > size.y:
+		for side: float in [-1.0, 1.0]:
+			_make_box(world_root, "Corridor pressure wall", Vector3(center.x, WALL_HEIGHT * 0.5, center.y + side * (size.y * 0.5 - WALL_THICKNESS * 0.5)), Vector3(size.x + overlap * 2.0, WALL_HEIGHT, WALL_THICKNESS), ROOM_WALL_COLOR)
+	else:
+		for side: float in [-1.0, 1.0]:
+			_make_box(world_root, "Corridor pressure wall", Vector3(center.x + side * (size.x * 0.5 - WALL_THICKNESS * 0.5), WALL_HEIGHT * 0.5, center.y), Vector3(WALL_THICKNESS, WALL_HEIGHT, size.y + overlap * 2.0), ROOM_WALL_COLOR)
+	_make_visual_box(str(first["title"]) + " corridor ceiling", Vector3(center.x, WALL_HEIGHT + 0.04, center.y), Vector3(size.x + overlap * 2.0, 0.18, size.y + overlap * 2.0), Color("#8e9b99"))
+	_make_emissive_box("Corridor recessed light", Vector3(center.x, WALL_HEIGHT - 0.08, center.y), Vector3(0.34, 0.035, maxf(size.y, 1.0) * 0.52 if size.x > size.y else maxf(size.x, 1.0) * 0.52), Color("#d9ffff"), 0.65)
 
 
 func _build_outside() -> void:
