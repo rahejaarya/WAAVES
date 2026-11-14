@@ -34,6 +34,8 @@ func _draw() -> void:
 		var t := float(step) / 12.0
 		var y := horizon_y + (floor_bottom - horizon_y) * t * t
 		draw_line(Vector2(0, y), Vector2(view_size.x, y), GRID, 1.0 if step < 9 else 1.3)
+	var platform_y := floor_bottom - 20.0
+	draw_line(Vector2(0, platform_y), Vector2(view_size.x, platform_y), Color(0.58, 0.98, 0.98, 0.78), 2.0)
 
 	_draw_header()
 	_draw_map(view_size, horizon_y, floor_bottom)
@@ -96,6 +98,6 @@ func _draw_map(view_size: Vector2, horizon_y: float, floor_bottom: float) -> voi
 func _draw_controls(view_size: Vector2) -> void:
 	var font: Font = ThemeDB.fallback_font
 	var position := Vector2(20, view_size.y - 48)
-	draw_rect(Rect2(position - Vector2(9, 21), Vector2(252, 34)), PANEL, true)
-	draw_rect(Rect2(position - Vector2(9, 21), Vector2(252, 34)), Color(0.50, 0.82, 0.87, 0.45), false, 1.0)
-	draw_string(font, position, "MOVE  WASD / ARROWS", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, HUD_DIM)
+	draw_rect(Rect2(position - Vector2(9, 21), Vector2(330, 34)), PANEL, true)
+	draw_rect(Rect2(position - Vector2(9, 21), Vector2(330, 34)), Color(0.50, 0.82, 0.87, 0.45), false, 1.0)
+	draw_string(font, position, "MOVE  A / D OR ← / →     JUMP  SPACE / W / ↑", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, HUD_DIM)

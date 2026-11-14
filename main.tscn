@@ -10,7 +10,7 @@ size = Vector2(1200, 40)
 script = ExtResource("2_main_script")
 
 [node name="Player" parent="." instance=ExtResource("1_3t6y8")]
-position = Vector2(576, 300)
+position = Vector2(576, 563)
 
 [node name="Ground" type="StaticBody2D" parent="."]
 position = Vector2(576, 610)
