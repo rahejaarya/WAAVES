@@ -1,6 +1,6 @@
 extends Control
 
-const MAP_SCALE := 4.2
+const MAP_SCALE := 2.9
 const PANEL_COLOR := Color(0.025, 0.065, 0.085, 0.94)
 const ROOM_COLOR := Color(0.12, 0.23, 0.28, 0.98)
 const ROOM_OUTLINE := Color(0.38, 0.75, 0.79, 0.95)
@@ -9,21 +9,21 @@ const ROOM_ACTIVE := Color(0.19, 0.40, 0.43, 1.0)
 const ROOM_ACTIVE_OUTLINE := Color("#fff0a6")
 
 const ROOMS := [
-	{"id": "garden", "label": "GARDEN", "center": Vector2(0, -18.5), "size": Vector2(8, 7)},
-	{"id": "dining", "label": "DINING", "center": Vector2(0, -10), "size": Vector2(10, 8)},
-	{"id": "med", "label": "MED", "center": Vector2(-10, -10), "size": Vector2(8, 8)},
-	{"id": "rest", "label": "REST", "center": Vector2(10, -10), "size": Vector2(8, 8)},
-	{"id": "lab", "label": "LAB", "center": Vector2(-10, 0), "size": Vector2(8, 8)},
-	{"id": "main", "label": "MAIN", "center": Vector2(0, 0), "size": Vector2(10, 8)},
-	{"id": "sleep", "label": "SLEEP", "center": Vector2(10, 0), "size": Vector2(8, 8)},
-	{"id": "airlock", "label": "AIRLOCK", "center": Vector2(0, 8), "size": Vector2(4, 4)},
-	{"id": "outside", "label": "OUTSIDE", "center": Vector2(0, 17), "size": Vector2(18, 18)}
+	{"id": "garden", "label": "GARDEN", "center": Vector2(0, -28), "size": Vector2(12, 10)},
+	{"id": "dining", "label": "DINING", "center": Vector2(0, -16), "size": Vector2(16, 12)},
+	{"id": "med", "label": "MED BAY", "center": Vector2(-18, -16), "size": Vector2(12, 12)},
+	{"id": "restroom", "label": "RESTROOM", "center": Vector2(18, -16), "size": Vector2(12, 12)},
+	{"id": "lab", "label": "LAB", "center": Vector2(-18, 0), "size": Vector2(12, 12)},
+	{"id": "main", "label": "MAIN", "center": Vector2(0, 0), "size": Vector2(16, 12)},
+	{"id": "sleep", "label": "SLEEP", "center": Vector2(18, 0), "size": Vector2(12, 12)},
+	{"id": "airlock", "label": "AIRLOCK", "center": Vector2(0, 13), "size": Vector2(8, 8)},
+	{"id": "outside", "label": "OUTSIDE", "center": Vector2(0, 29), "size": Vector2(24, 24)}
 ]
 
 const LINKS := [
 	["main", "dining"], ["dining", "garden"], ["dining", "med"],
-	["med", "lab"], ["lab", "main"], ["dining", "rest"],
-	["rest", "sleep"], ["main", "sleep"], ["main", "airlock"], ["airlock", "outside"]
+	["med", "lab"], ["lab", "main"], ["dining", "restroom"],
+	["restroom", "sleep"], ["main", "sleep"], ["main", "airlock"], ["airlock", "outside"]
 ]
 
 var player: Node3D
@@ -72,9 +72,9 @@ func _draw() -> void:
 			draw_string(font, Vector2(rect.position.x, center.y + 3), room["label"], HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 7, Color("#fff0a6") if is_current_room else Color("#e1f3f3"))
 
 	# Tiny outside markers mirror the solar panels and dish in the world.
-	var solar_left := _to_map(Vector2(-4.2, 17.0), map_center)
-	var solar_right := _to_map(Vector2(-1.5, 17.0), map_center)
-	var dish := _to_map(Vector2(4.2, 17.0), map_center)
+	var solar_left := _to_map(Vector2(-6.2, 27.0), map_center)
+	var solar_right := _to_map(Vector2(-2.4, 27.0), map_center)
+	var dish := _to_map(Vector2(6.0, 29.0), map_center)
 	draw_rect(Rect2(solar_left - Vector2(4, 2), Vector2(8, 4)), Color("#52b9dc"), true)
 	draw_rect(Rect2(solar_right - Vector2(4, 2), Vector2(8, 4)), Color("#52b9dc"), true)
 	draw_circle(dish, 3.0, Color("#f0d68c"))

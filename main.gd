@@ -5,23 +5,23 @@ const MinimapScript := preload("res://minimap.gd")
 const FLOOR_THICKNESS := 0.3
 const WALL_HEIGHT := 1.15
 const WALL_THICKNESS := 0.32
-const DOOR_WIDTH := 2.8
+const DOOR_WIDTH := 4.4
 
 const ROOMS := [
-	{"id": "main", "title": "MAIN ROOM", "center": Vector2(0, 0), "size": Vector2(10, 8), "doors": ["north", "east", "south", "west"], "floor": Color("#263943")},
-	{"id": "dining", "title": "DINING ROOM", "center": Vector2(0, -10), "size": Vector2(10, 8), "doors": ["north", "east", "south", "west"], "floor": Color("#2a3c43")},
-	{"id": "garden", "title": "GARDEN", "center": Vector2(0, -18.5), "size": Vector2(8, 7), "doors": ["south"], "floor": Color("#334739")},
-	{"id": "med", "title": "MED BAY", "center": Vector2(-10, -10), "size": Vector2(8, 8), "doors": ["east", "south"], "floor": Color("#35434b")},
-	{"id": "lab", "title": "LAB", "center": Vector2(-10, 0), "size": Vector2(8, 8), "doors": ["north", "east"], "floor": Color("#343746")},
-	{"id": "rest", "title": "REST ROOM", "center": Vector2(10, -10), "size": Vector2(8, 8), "doors": ["west", "south"], "floor": Color("#403940")},
-	{"id": "sleep", "title": "SLEEPING", "center": Vector2(10, 0), "size": Vector2(8, 8), "doors": ["north", "west"], "floor": Color("#3d414b")},
-	{"id": "airlock", "title": "AIRLOCK", "center": Vector2(0, 8), "size": Vector2(4, 4), "doors": ["north", "south"], "floor": Color("#43464a")}
+	{"id": "main", "title": "MAIN ROOM", "center": Vector2(0, 0), "size": Vector2(16, 12), "doors": ["north", "east", "south", "west"], "floor": Color("#263943")},
+	{"id": "dining", "title": "DINING ROOM", "center": Vector2(0, -16), "size": Vector2(16, 12), "doors": ["north", "east", "south", "west"], "floor": Color("#2a3c43")},
+	{"id": "garden", "title": "GARDEN", "center": Vector2(0, -28), "size": Vector2(12, 10), "doors": ["south"], "floor": Color("#334739")},
+	{"id": "med", "title": "MEDICAL BAY", "center": Vector2(-18, -16), "size": Vector2(12, 12), "doors": ["east", "south"], "floor": Color("#35434b")},
+	{"id": "lab", "title": "LAB", "center": Vector2(-18, 0), "size": Vector2(12, 12), "doors": ["north", "east"], "floor": Color("#343746")},
+	{"id": "restroom", "title": "RESTROOM", "center": Vector2(18, -16), "size": Vector2(12, 12), "doors": ["west", "south"], "floor": Color("#403940")},
+	{"id": "sleep", "title": "SLEEPING ROOM", "center": Vector2(18, 0), "size": Vector2(12, 12), "doors": ["north", "west"], "floor": Color("#3d414b")},
+	{"id": "airlock", "title": "AIRLOCK", "center": Vector2(0, 13), "size": Vector2(8, 8), "doors": ["north", "south"], "floor": Color("#43464a")}
 ]
 
 const LINKS := [
 	["main", "dining"], ["dining", "garden"], ["dining", "med"],
-	["med", "lab"], ["lab", "main"], ["dining", "rest"],
-	["rest", "sleep"], ["main", "sleep"], ["main", "airlock"]
+	["med", "lab"], ["lab", "main"], ["dining", "restroom"],
+	["restroom", "sleep"], ["main", "sleep"], ["main", "airlock"]
 ]
 
 const ROOM_WALL_COLOR := Color("#506a72")
@@ -47,7 +47,7 @@ func _ready() -> void:
 	_build_rooms()
 	_build_corridors()
 	_build_outside()
-	_add_simple_room_props()
+	_add_room_props()
 	_build_camera()
 	_build_hud()
 
@@ -195,13 +195,13 @@ func _build_corridors() -> void:
 
 
 func _build_outside() -> void:
-	var outside_center := Vector3(0, -0.17, 17)
+	var outside_center := Vector3(0, -0.17, 29)
 	var surface := StaticBody3D.new()
 	surface.name = "Outside Landing Area"
 	surface.position = outside_center
 	var disc_mesh := CylinderMesh.new()
-	disc_mesh.top_radius = 9.5
-	disc_mesh.bottom_radius = 9.5
+	disc_mesh.top_radius = 12.0
+	disc_mesh.bottom_radius = 12.0
 	disc_mesh.height = 0.34
 	disc_mesh.radial_segments = 40
 	var disc_instance := MeshInstance3D.new()
@@ -210,37 +210,37 @@ func _build_outside() -> void:
 	surface.add_child(disc_instance)
 	var disc_shape := CollisionShape3D.new()
 	var cylinder := CylinderShape3D.new()
-	cylinder.radius = 9.5
+	cylinder.radius = 12.0
 	cylinder.height = 0.34
 	disc_shape.shape = cylinder
 	surface.add_child(disc_shape)
 	world_root.add_child(surface)
 
 	# A low safety rail surrounds the outside pad, with a clear gap back to the airlock.
-	for index in range(32):
-		var angle := TAU * float(index) / 32.0
+	for index in range(40):
+		var angle := TAU * float(index) / 40.0
 		if absf(wrapf(angle - PI, -PI, PI)) < 0.34:
 			continue
-		var rail_position := Vector3(sin(angle) * 9.25, 0.27, 17.0 + cos(angle) * 9.25)
-		_make_box(world_root, "Outside safety rail", rail_position, Vector3(1.85, 0.54, 0.24), Color("#66746d"), angle)
+		var rail_position := Vector3(sin(angle) * 11.7, 0.27, 29.0 + cos(angle) * 11.7)
+		_make_box(world_root, "Outside safety rail", rail_position, Vector3(1.55, 0.54, 0.24), Color("#66746d"), angle)
 
 	_add_solar_panels()
 	_add_satellite_dish()
 
 
 func _add_solar_panels() -> void:
-	for x_position: float in [-4.4, -1.4]:
-		var center := Vector3(x_position, 0.42, 16.2)
+	for x_position: float in [-6.2, -2.4]:
+		var center := Vector3(x_position, 0.42, 27.0)
 		_make_visual_box("Solar panel stand", center - Vector3(0, 0.22, 0), Vector3(0.16, 0.44, 0.16), Color("#8a9996"))
-		_make_visual_box("Solar panel frame", center, Vector3(2.55, 0.16, 1.55), Color("#74838a"))
-		_make_visual_box("Solar panel", center + Vector3(0, 0.1, 0), Vector3(2.37, 0.07, 1.38), Color("#174b65"))
+		_make_visual_box("Solar panel frame", center, Vector3(3.15, 0.16, 1.8), Color("#74838a"))
+		_make_visual_box("Solar panel", center + Vector3(0, 0.1, 0), Vector3(2.97, 0.07, 1.63), Color("#174b65"))
 		for strip in range(1, 4):
-			var line_x := x_position - 0.95 + float(strip - 1) * 0.63
-			_make_visual_box("Solar panel cell line", Vector3(line_x, 0.16, 16.2), Vector3(0.035, 0.025, 1.28), Color("#66cde0"))
+			var line_x := x_position - 1.0 + float(strip - 1) * 0.67
+			_make_visual_box("Solar panel cell line", Vector3(line_x, 0.16, 27.0), Vector3(0.035, 0.025, 1.5), Color("#66cde0"))
 
 
 func _add_satellite_dish() -> void:
-	_make_visual_box("Satellite dish support", Vector3(4.25, 0.72, 17.2), Vector3(0.22, 1.4, 0.22), Color("#aab5b2"))
+	_make_visual_box("Satellite dish support", Vector3(6.0, 0.72, 29.0), Vector3(0.22, 1.4, 0.22), Color("#aab5b2"))
 	var dish_mesh := SphereMesh.new()
 	dish_mesh.radius = 0.95
 	dish_mesh.height = 0.32
@@ -248,25 +248,145 @@ func _add_satellite_dish() -> void:
 	dish.name = "Satellite dish"
 	dish.mesh = dish_mesh
 	dish.scale = Vector3(1, 1, 0.72)
-	dish.position = Vector3(4.25, 1.35, 17.2)
+	dish.position = Vector3(6.0, 1.35, 29.0)
 	dish.material_override = _material(Color("#bdc8c1"))
 	world_root.add_child(dish)
-	_make_visual_box("Satellite receiver", Vector3(4.25, 1.48, 17.2), Vector3(0.18, 0.18, 0.5), Color("#526c73"))
+	_make_visual_box("Satellite receiver", Vector3(6.0, 1.48, 29.0), Vector3(0.18, 0.18, 0.5), Color("#526c73"))
 
 
-func _add_simple_room_props() -> void:
-	# Small, non-blocking shapes identify rooms while keeping the layout open for roaming.
-	_make_visual_box("Dining table", Vector3(0, 0.48, -10), Vector3(2.8, 0.18, 1.5), Color("#71858a"))
-	_make_visual_box("Med bay bed", Vector3(-10.7, 0.25, -10), Vector3(1.6, 0.32, 2.5), Color("#b9c5c2"))
-	_make_visual_box("Med bay pillow", Vector3(-10.7, 0.45, -10.8), Vector3(1.25, 0.14, 0.55), Color("#74b8bd"))
-	_make_visual_box("Lab workbench", Vector3(-10, 0.52, 2.25), Vector3(4.0, 0.2, 0.8), Color("#74758a"))
-	_make_visual_box("Rest room couch", Vector3(10, 0.42, -10), Vector3(2.7, 0.7, 0.9), Color("#697d83"))
-	_make_visual_box("Sleeping bunk", Vector3(10, 0.28, 0), Vector3(2.7, 0.3, 1.5), Color("#aeb9b7"))
-	_make_visual_box("Main room air filter", Vector3(3.2, 0.9, 2.1), Vector3(1.2, 1.8, 0.9), Color("#71858a"))
-	_make_visual_box("Air filter screen", Vector3(3.2, 1.05, 1.62), Vector3(0.72, 0.44, 0.06), Color("#63d5dc"))
-	for x_position: float in [-2.2, 0.0, 2.2]:
-		_make_visual_box("Garden planter", Vector3(x_position, 0.22, -18.5), Vector3(1.0, 0.42, 1.0), Color("#655744"))
-		_make_visual_sphere("Garden plant", Vector3(x_position, 0.73, -18.5), 0.52, Color("#7fa777"))
+func _add_room_props() -> void:
+	_add_med_bay_props()
+	_add_dining_props()
+	_add_restroom_props()
+	_add_lab_props()
+	_add_main_room_props()
+	_add_sleeping_room_props()
+	_add_airlock_props()
+	for x_position: float in [-3.6, 0.0, 3.6]:
+		_make_visual_box("Garden planter", Vector3(x_position, 0.22, -28.0), Vector3(1.45, 0.42, 1.5), Color("#655744"))
+		_make_visual_sphere("Garden plant", Vector3(x_position, 0.95, -28.0), 0.72, Color("#7fa777"))
+
+
+func _add_med_bay_props() -> void:
+	for bed_index in range(2):
+		var bed_z := -18.5 + float(bed_index) * 5.0
+		_make_visual_box("Medical bed frame", Vector3(-21.5, 0.38, bed_z), Vector3(2.35, 0.52, 3.4), Color("#aab8bb"))
+		_make_visual_box("Medical mattress", Vector3(-21.5, 0.69, bed_z), Vector3(2.22, 0.14, 3.27), Color("#d2dcda"))
+		_make_visual_box("Medical pillow", Vector3(-21.5, 0.83, bed_z - 1.22), Vector3(1.45, 0.18, 0.72), Color("#71b8c0"))
+		_make_visual_box("Bedside monitor", Vector3(-19.85, 1.32, bed_z - 1.0), Vector3(0.8, 1.35, 0.65), Color("#536b75"))
+		_make_visual_box("Bed monitor display", Vector3(-19.46, 1.45, bed_z - 1.0), Vector3(0.035, 0.56, 0.43), Color("#62d5d5"))
+	_make_visual_box("Specimen diagnostic analyzer", Vector3(-13.7, 0.85, -19.6), Vector3(2.2, 1.7, 1.35), Color("#87999a"))
+	_make_visual_box("Diagnostic screen", Vector3(-14.15, 1.56, -18.9), Vector3(0.9, 0.64, 0.08), Color("#62d5d5"))
+	for shelf_level in range(3):
+		_make_visual_box("Surgical supply shelf", Vector3(-23.0, 0.55 + float(shelf_level) * 0.63, -11.4), Vector3(3.7, 0.13, 0.72), Color("#71858a"))
+	for kit_index in range(3):
+		_make_visual_box("First aid kit", Vector3(-22.0 + float(kit_index) * 1.05, 0.93, -11.4), Vector3(0.72, 0.45, 0.52), Color("#d3e0dc"))
+		_make_visual_box("First aid marking", Vector3(-22.0 + float(kit_index) * 1.05, 1.17, -11.4), Vector3(0.3, 0.045, 0.08), Color("#d45e58"))
+	_make_visual_box("Life support cabinet", Vector3(-13.5, 1.15, -12.0), Vector3(2.0, 2.25, 1.4), Color("#687e82"))
+	_make_visual_box("Life support status panel", Vector3(-13.5, 1.35, -11.27), Vector3(1.15, 0.58, 0.06), Color("#66d1c7"))
+
+
+func _add_dining_props() -> void:
+	for table_position: Vector2 in [Vector2(-4.4, -18.5), Vector2(4.4, -18.5), Vector2(-4.4, -13.5), Vector2(4.4, -13.5)]:
+		var x := table_position.x
+		var z := table_position.y
+		_make_visual_box("Cafeteria table", Vector3(x, 0.92, z), Vector3(3.1, 0.18, 2.0), Color("#74888a"))
+		for leg_x: float in [-1.25, 1.25]:
+			for leg_z: float in [-0.72, 0.72]:
+				_make_visual_box("Table leg", Vector3(x + leg_x, 0.45, z + leg_z), Vector3(0.12, 0.9, 0.12), Color("#829396"))
+		for seat_offset: float in [-1.0, 1.0]:
+			_make_visual_box("Dining bench", Vector3(x + seat_offset * 2.05, 0.5, z), Vector3(0.72, 0.82, 1.5), Color("#506a72"))
+		for place_offset: float in [-0.52, 0.52]:
+			_make_visual_box("Packaged meal", Vector3(x + place_offset, 1.08, z - 0.35), Vector3(0.36, 0.18, 0.3), Color("#d2a66b"))
+			_make_visual_box("Fork", Vector3(x + place_offset - 0.34, 1.04, z + 0.3), Vector3(0.06, 0.035, 0.42), Color("#c9d4d4"))
+			_make_visual_box("Spoon", Vector3(x + place_offset, 1.04, z + 0.3), Vector3(0.07, 0.035, 0.42), Color("#c9d4d4"))
+			_make_visual_box("Knife", Vector3(x + place_offset + 0.34, 1.04, z + 0.3), Vector3(0.06, 0.035, 0.42), Color("#c9d4d4"))
+	for level in range(3):
+		_make_visual_box("Cafeteria food shelf", Vector3(6.2, 0.55 + float(level) * 0.72, -11.8), Vector3(2.5, 0.14, 0.72), Color("#71858a"))
+	for item in range(4):
+		_make_visual_box("Packaged food storage", Vector3(5.3 + float(item % 2) * 0.8, 0.94 + float(item / 2) * 0.72, -11.8), Vector3(0.55, 0.42, 0.5), Color("#d1a66c"))
+
+
+func _add_restroom_props() -> void:
+	_make_visual_box("Suction toilet base", Vector3(21.5, 0.42, -19.0), Vector3(1.5, 0.72, 1.9), Color("#c2ceca"))
+	_make_visual_sphere("Suction toilet bowl", Vector3(21.5, 0.82, -19.0), 0.72, Color("#e0e7e3"))
+	_make_visual_box("Toilet foot restraints", Vector3(21.5, 1.15, -19.65), Vector3(1.4, 0.12, 0.22), Color("#778b8e"))
+	_make_visual_box("Air suction unit", Vector3(23.3, 1.45, -19.0), Vector3(1.25, 2.6, 1.1), Color("#657c83"))
+	_make_visual_box("Air suction grille", Vector3(22.66, 1.65, -19.0), Vector3(0.055, 0.85, 0.72), Color("#79d1d0"))
+	_make_visual_box("Sponge bath bench", Vector3(21.5, 0.55, -12.3), Vector3(3.5, 0.42, 1.35), Color("#657c83"))
+	_make_visual_box("Bath privacy panel", Vector3(24.0, 1.25, -12.3), Vector3(0.12, 2.5, 3.0), Color("#93a9a5"))
+	_make_visual_box("Wet wipes cabinet", Vector3(14.2, 1.1, -12.0), Vector3(1.65, 2.1, 1.2), Color("#75898b"))
+	for pack in range(3):
+		_make_visual_box("Wet wipes pack", Vector3(14.2, 2.25, -12.65 + float(pack) * 0.48), Vector3(0.85, 0.34, 0.36), Color("#8ed0c8"))
+
+
+func _add_lab_props() -> void:
+	for bench_z: float in [-4.0, 4.0]:
+		_make_visual_box("Laboratory workbench", Vector3(-18.0, 0.92, bench_z), Vector3(7.0, 0.18, 1.5), Color("#74758a"))
+		for leg_x: float in [-3.0, 3.0]:
+			_make_visual_box("Lab bench leg", Vector3(-18.0 + leg_x, 0.45, bench_z), Vector3(0.16, 0.9, 1.25), Color("#66717b"))
+	for microscope_x: float in [-20.2, -18.0, -15.8]:
+		_make_visual_box("Microscope base", Vector3(microscope_x, 1.08, -3.8), Vector3(0.9, 0.12, 0.62), Color("#bcc7c4"))
+		_make_visual_box("Microscope stem", Vector3(microscope_x, 1.52, -3.8), Vector3(0.14, 0.82, 0.16), Color("#aab8b8"))
+		_make_visual_box("Microscope eyepiece", Vector3(microscope_x, 1.94, -3.54), Vector3(0.22, 0.14, 0.52), Color("#536c78"))
+	for sample_x: float in [-20.8, -19.5, -16.5, -15.2]:
+		_make_visual_cylinder("Lunar dust sample jar", Vector3(sample_x, 1.27, 4.0), 0.27, 0.58, Color("#b7b99b"))
+		_make_visual_cylinder("Sample jar cap", Vector3(sample_x, 1.59, 4.0), 0.3, 0.1, Color("#667982"))
+	_make_visual_box("Moonquake seismometer pedestal", Vector3(-18.0, 0.38, 0.0), Vector3(2.7, 0.7, 2.7), Color("#64747d"))
+	_make_visual_box("Seismometer instrument", Vector3(-18.0, 1.12, 0.0), Vector3(1.55, 0.85, 1.5), Color("#a5b0aa"))
+	_make_visual_box("Seismometer display", Vector3(-18.0, 1.62, -0.76), Vector3(0.82, 0.42, 0.06), Color("#69d4c6"))
+	for gear_index in range(4):
+		_make_visual_box("Lab equipment case", Vector3(-21.0 + float(gear_index) * 2.0, 1.24, -4.0), Vector3(0.82, 0.46, 0.7), Color("#89999c"))
+
+
+func _add_main_room_props() -> void:
+	# Console banks stay against the walls to preserve an open central gathering area.
+	for console_x: float in [-5.0, -2.0, 1.0, 4.0]:
+		_make_visual_box("Main room computer desk", Vector3(console_x, 0.82, 4.25), Vector3(2.25, 0.18, 1.05), Color("#667b83"))
+		_make_visual_box("Main room computer", Vector3(console_x, 1.47, 3.95), Vector3(0.95, 1.1, 0.22), Color("#3e535e"))
+		_make_visual_box("Main room computer display", Vector3(console_x, 1.54, 3.82), Vector3(0.75, 0.58, 0.04), Color("#68d4d0"))
+	_make_visual_box("Main room air filter", Vector3(6.2, 1.22, 3.3), Vector3(1.55, 2.4, 1.45), Color("#71858a"))
+	_make_visual_box("Air filter screen", Vector3(5.4, 1.48, 3.3), Vector3(0.06, 0.58, 0.72), Color("#63d5dc"))
+
+
+func _add_sleeping_room_props() -> void:
+	for bunk_x: float in [14.5, 21.5]:
+		for level in range(2):
+			var mattress_y := 0.48 + float(level) * 1.35
+			_make_visual_box("Bunk bed frame", Vector3(bunk_x, mattress_y, -1.1), Vector3(3.0, 0.18, 3.7), Color("#77888b"))
+			_make_visual_box("Bunk bed mattress", Vector3(bunk_x, mattress_y + 0.13, -1.1), Vector3(2.78, 0.18, 3.45), Color("#c1ccca"))
+			_make_visual_box("Bunk bed pillow", Vector3(bunk_x, mattress_y + 0.28, -2.38), Vector3(1.3, 0.16, 0.62), Color("#74b8bd"))
+		for post_x: float in [-1.3, 1.3]:
+			_make_visual_box("Bunk bed post", Vector3(bunk_x + post_x, 1.35, -1.1), Vector3(0.12, 2.7, 0.12), Color("#91a09e"))
+	for shelf_level in range(3):
+		_make_visual_box("Sleeping room shelf", Vector3(22.0, 0.55 + float(shelf_level) * 0.68, 4.0), Vector3(3.6, 0.14, 0.72), Color("#758589"))
+	for storage in range(4):
+		_make_visual_box("Personal storage box", Vector3(20.7 + float(storage % 2) * 1.0, 0.9 + float(storage / 2) * 0.68, 4.0), Vector3(0.72, 0.46, 0.52), Color("#9aa8a3"))
+
+
+func _add_airlock_props() -> void:
+	_make_visual_box("Airlock inner door frame", Vector3(0, 1.45, 9.1), Vector3(5.2, 2.9, 0.24), Color("#879497"))
+	for side: float in [-1.0, 1.0]:
+		_make_visual_box("Airlock inner sliding door", Vector3(side * 1.48, 1.35, 9.28), Vector3(1.25, 2.45, 0.18), Color("#566d75"))
+	_make_visual_box("Airlock outer door frame", Vector3(0, 1.45, 16.9), Vector3(5.2, 2.9, 0.24), Color("#879497"))
+	for side: float in [-1.0, 1.0]:
+		_make_visual_box("Airlock outer sliding door", Vector3(side * 1.48, 1.35, 16.72), Vector3(1.25, 2.45, 0.18), Color("#566d75"))
+	_make_visual_box("Airlock control panel", Vector3(3.0, 1.5, 13.0), Vector3(0.28, 2.3, 0.9), Color("#657e84"))
+	_make_visual_box("Airlock control lights", Vector3(2.83, 1.85, 13.0), Vector3(0.06, 0.62, 0.48), Color("#72d7bf"))
+
+
+func _make_visual_cylinder(cylinder_name: String, cylinder_position: Vector3, radius: float, height: float, color: Color) -> MeshInstance3D:
+	var instance := MeshInstance3D.new()
+	instance.name = cylinder_name
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = height
+	instance.mesh = mesh
+	instance.position = cylinder_position
+	instance.material_override = _material(color)
+	world_root.add_child(instance)
+	return instance
 
 
 func _build_camera() -> void:
@@ -332,7 +452,7 @@ func _make_label(text: String, label_position: Vector2, font_size: int, color: C
 
 func _room_id_at_player() -> String:
 	var player_position := Vector2(player.global_position.x, player.global_position.z)
-	if player_position.distance_to(Vector2(0, 17)) <= 9.0:
+	if player_position.distance_to(Vector2(0, 29)) <= 11.5:
 		return "outside"
 	for room: Dictionary in ROOMS:
 		var center: Vector2 = room["center"]
