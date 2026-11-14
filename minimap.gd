@@ -5,6 +5,8 @@ const PANEL_COLOR := Color(0.025, 0.065, 0.085, 0.94)
 const ROOM_COLOR := Color(0.12, 0.23, 0.28, 0.98)
 const ROOM_OUTLINE := Color(0.38, 0.75, 0.79, 0.95)
 const MAP_LINK := Color(0.34, 0.58, 0.62, 0.82)
+const ROOM_ACTIVE := Color(0.19, 0.40, 0.43, 1.0)
+const ROOM_ACTIVE_OUTLINE := Color("#fff0a6")
 
 const ROOMS := [
 	{"id": "garden", "label": "GARDEN", "center": Vector2(0, -18.5), "size": Vector2(8, 7)},
@@ -25,6 +27,7 @@ const LINKS := [
 ]
 
 var player: Node3D
+var current_room_id := "main"
 
 
 func _process(_delta: float) -> void:
@@ -52,17 +55,21 @@ func _draw() -> void:
 
 	for room: Dictionary in ROOMS:
 		var center: Vector2 = points[room["id"]]
+		var is_current_room: bool = room["id"] == current_room_id
 		if room["id"] == "outside":
 			var outside_size: Vector2 = room["size"]
 			var radius: float = outside_size.x * MAP_SCALE * 0.5
-			draw_circle(center, radius, Color(0.20, 0.27, 0.20, 0.92))
-			draw_arc(center, radius, 0.0, TAU, 36, ROOM_OUTLINE, 1.2)
+			var outside_color := ROOM_ACTIVE if is_current_room else Color(0.20, 0.27, 0.20, 0.92)
+			var outside_outline := ROOM_ACTIVE_OUTLINE if is_current_room else ROOM_OUTLINE
+			draw_circle(center, radius, outside_color)
+			draw_arc(center, radius, 0.0, TAU, 36, outside_outline, 2.0 if is_current_room else 1.2)
+			draw_string(font, Vector2(center.x - radius, center.y + 3), room["label"], HORIZONTAL_ALIGNMENT_CENTER, radius * 2.0, 7, Color("#f1f5df"))
 		else:
 			var room_size: Vector2 = room["size"] * MAP_SCALE
 			var rect := Rect2(center - room_size * 0.5, room_size)
-			draw_rect(rect, ROOM_COLOR, true)
-			draw_rect(rect, ROOM_OUTLINE, false, 1.0)
-			draw_string(font, Vector2(rect.position.x, center.y + 3), room["label"], HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 7, Color("#e1f3f3"))
+			draw_rect(rect, ROOM_ACTIVE if is_current_room else ROOM_COLOR, true)
+			draw_rect(rect, ROOM_ACTIVE_OUTLINE if is_current_room else ROOM_OUTLINE, false, 2.0 if is_current_room else 1.0)
+			draw_string(font, Vector2(rect.position.x, center.y + 3), room["label"], HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 7, Color("#fff0a6") if is_current_room else Color("#e1f3f3"))
 
 	# Tiny outside markers mirror the solar panels and dish in the world.
 	var solar_left := _to_map(Vector2(-4.2, 17.0), map_center)

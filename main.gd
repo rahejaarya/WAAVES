@@ -3,7 +3,7 @@ extends Node3D
 const MinimapScript := preload("res://minimap.gd")
 
 const FLOOR_THICKNESS := 0.3
-const WALL_HEIGHT := 1.7
+const WALL_HEIGHT := 1.15
 const WALL_THICKNESS := 0.32
 const DOOR_WIDTH := 2.8
 
@@ -55,10 +55,12 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not is_instance_valid(player):
 		return
-	var camera_target := player.global_position + Vector3(0, 20, 10)
+	var camera_target := player.global_position + Vector3(0, 4.6, 7.4)
 	follow_camera.global_position = follow_camera.global_position.lerp(camera_target, minf(delta * 7.0, 1.0))
-	follow_camera.look_at(player.global_position + Vector3(0, 0.75, 0), Vector3.UP)
-	room_label.text = "AREA  /  " + _room_at_player()
+	follow_camera.look_at(player.global_position + Vector3(0, 1.0, 0), Vector3.UP)
+	var current_room_id := _room_id_at_player()
+	room_label.text = "AREA  /  " + _room_title(current_room_id)
+	minimap.set("current_room_id", current_room_id)
 
 
 func _build_environment() -> void:
@@ -76,7 +78,7 @@ func _build_environment() -> void:
 	key_light.name = "Soft Station Light"
 	key_light.rotation_degrees = Vector3(-58, -28, 0)
 	key_light.light_energy = 1.25
-	key_light.shadow_enabled = false
+	key_light.shadow_enabled = true
 	add_child(key_light)
 
 
@@ -98,7 +100,28 @@ func _build_room(room: Dictionary) -> void:
 	)
 
 	for side: String in ["north", "east", "south", "west"]:
-		_build_wall(room, side, room["doors"].has(side))
+		var has_door: bool = room["doors"].has(side)
+		_build_wall(room, side, has_door)
+		if has_door:
+			_build_door_threshold(room, side)
+
+
+func _build_door_threshold(room: Dictionary, side: String) -> void:
+	var center: Vector2 = room["center"]
+	var room_size: Vector2 = room["size"]
+	var threshold_position := Vector3(center.x, 0.025, center.y)
+	var threshold_size := Vector3(DOOR_WIDTH, 0.035, 0.13)
+	if side == "north":
+		threshold_position.z -= room_size.y * 0.5
+	elif side == "south":
+		threshold_position.z += room_size.y * 0.5
+	elif side == "east":
+		threshold_position.x += room_size.x * 0.5
+		threshold_size = Vector3(0.13, 0.035, DOOR_WIDTH)
+	else:
+		threshold_position.x -= room_size.x * 0.5
+		threshold_size = Vector3(0.13, 0.035, DOOR_WIDTH)
+	_make_visual_box(str(room["title"]) + " doorway marker", threshold_position, threshold_size, Color("#4f9b9f"))
 
 
 func _build_wall(room: Dictionary, side: String, has_door: bool) -> void:
@@ -249,13 +272,13 @@ func _add_simple_room_props() -> void:
 func _build_camera() -> void:
 	follow_camera = Camera3D.new()
 	follow_camera.name = "Follow Camera"
-	follow_camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	follow_camera.size = 20.0
+	follow_camera.projection = Camera3D.PROJECTION_PERSPECTIVE
+	follow_camera.fov = 58.0
 	follow_camera.near = 0.1
 	follow_camera.far = 100.0
 	add_child(follow_camera)
-	follow_camera.global_position = player.global_position + Vector3(0, 20, 10)
-	follow_camera.look_at(player.global_position + Vector3(0, 0.75, 0), Vector3.UP)
+	follow_camera.global_position = player.global_position + Vector3(0, 4.6, 7.4)
+	follow_camera.look_at(player.global_position + Vector3(0, 1.0, 0), Vector3.UP)
 	follow_camera.current = true
 
 
@@ -307,16 +330,26 @@ func _make_label(text: String, label_position: Vector2, font_size: int, color: C
 	return label
 
 
-func _room_at_player() -> String:
+func _room_id_at_player() -> String:
 	var player_position := Vector2(player.global_position.x, player.global_position.z)
 	if player_position.distance_to(Vector2(0, 17)) <= 9.0:
-		return "OUTSIDE"
+		return "outside"
 	for room: Dictionary in ROOMS:
 		var center: Vector2 = room["center"]
 		var room_size: Vector2 = room["size"]
 		if absf(player_position.x - center.x) <= room_size.x * 0.5 and absf(player_position.y - center.y) <= room_size.y * 0.5:
-			return str(room["title"])
-	return "CONNECTING HALL"
+			return str(room["id"])
+	return "hallway"
+
+
+func _room_title(room_id: String) -> String:
+	if room_id == "outside":
+		return "OUTSIDE"
+	if room_id == "hallway":
+		return "CONNECTING HALL"
+	if rooms_by_id.has(room_id):
+		return str(rooms_by_id[room_id]["title"])
+	return "MAIN ROOM"
 
 
 func _make_box(parent: Node3D, box_name: String, box_position: Vector3, box_size: Vector3, color: Color, rotation_y: float = 0.0) -> StaticBody3D:

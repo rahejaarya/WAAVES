@@ -8,6 +8,7 @@ const JUMP_BUFFER_SECONDS := 0.14
 @onready var astronaut: Node3D = $Astronaut
 
 var jump_buffer := 0.0
+var walk_phase := 0.0
 
 
 func _input(event: InputEvent) -> void:
@@ -41,4 +42,10 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 	if direction.length_squared() > 0.0:
-		astronaut.rotation.y = atan2(-direction.x, -direction.z)
+		var target_rotation := atan2(-direction.x, -direction.z)
+		astronaut.rotation.y = lerp_angle(astronaut.rotation.y, target_rotation, minf(delta * 10.0, 1.0))
+	if is_on_floor() and direction.length_squared() > 0.0:
+		walk_phase += delta * 12.0
+		astronaut.position.y = sin(walk_phase) * 0.035
+	else:
+		astronaut.position.y = move_toward(astronaut.position.y, 0.0, delta * 0.3)
