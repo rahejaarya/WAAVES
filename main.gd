@@ -48,6 +48,7 @@ func _ready() -> void:
 	world_root.name = "Habitat"
 	add_child(world_root)
 	_build_rooms()
+	_build_habitat_foundation()
 	_build_corridors()
 	_build_outside()
 	_add_room_props()
@@ -249,6 +250,11 @@ func _build_corridors() -> void:
 		var first_size: Vector2 = first["size"]
 		var second_size: Vector2 = second["size"]
 		var delta := second_center - first_center
+		var first_side := "east" if delta.x > 0.0 else "west" if delta.x < 0.0 else "south" if delta.y > 0.0 else "north"
+		var second_side := "west" if delta.x > 0.0 else "east" if delta.x < 0.0 else "north" if delta.y > 0.0 else "south"
+		if not first["doors"].has(first_side) or not second["doors"].has(second_side):
+			push_error("Unaligned habitat link: %s -> %s" % [first["id"], second["id"]])
+			continue
 		var corridor_center := Vector2.ZERO
 		var corridor_size := Vector2.ZERO
 		if absf(delta.x) > absf(delta.y):
@@ -270,47 +276,48 @@ func _build_corridors() -> void:
 			Vector3(corridor_size.x, FLOOR_THICKNESS, corridor_size.y),
 			CORRIDOR_COLOR
 		)
-		_build_corridor_shell(first, second, corridor_center, corridor_size)
+		_build_corridor_shell(first, second, corridor_center, corridor_size, absf(delta.x) > absf(delta.y))
 
 
-func _build_corridor_shell(first: Dictionary, second: Dictionary, center: Vector2, size: Vector2) -> void:
+func _build_corridor_shell(first: Dictionary, second: Dictionary, center: Vector2, size: Vector2, runs_along_x: bool) -> void:
 	# A continuous pressure-hull tunnel connects each doorway; its side walls overlap
 	# the room bulkheads slightly so there are no gaps at either end.
 	var overlap := 0.34
-	if size.x > size.y:
+	if runs_along_x:
 		for side: float in [-1.0, 1.0]:
 			_make_box(world_root, "Corridor pressure wall", Vector3(center.x, WALL_HEIGHT * 0.5, center.y + side * (size.y * 0.5 - WALL_THICKNESS * 0.5)), Vector3(size.x + overlap * 2.0, WALL_HEIGHT, WALL_THICKNESS), ROOM_WALL_COLOR)
 	else:
 		for side: float in [-1.0, 1.0]:
 			_make_box(world_root, "Corridor pressure wall", Vector3(center.x + side * (size.x * 0.5 - WALL_THICKNESS * 0.5), WALL_HEIGHT * 0.5, center.y), Vector3(WALL_THICKNESS, WALL_HEIGHT, size.y + overlap * 2.0), ROOM_WALL_COLOR)
 	_make_visual_box(str(first["title"]) + " corridor ceiling", Vector3(center.x, WALL_HEIGHT + 0.04, center.y), Vector3(size.x + overlap * 2.0, 0.18, size.y + overlap * 2.0), Color("#8e9b99"))
-	_make_emissive_box("Corridor recessed light", Vector3(center.x, WALL_HEIGHT - 0.08, center.y), Vector3(0.34, 0.035, maxf(size.y, 1.0) * 0.52 if size.x > size.y else maxf(size.x, 1.0) * 0.52), Color("#d9ffff"), 0.65)
+	var light_size := Vector3(size.x * 0.52, 0.035, 0.34) if runs_along_x else Vector3(0.34, 0.035, size.y * 0.52)
+	_make_emissive_box("Corridor recessed light", Vector3(center.x, WALL_HEIGHT - 0.08, center.y), light_size, Color("#d9ffff"), 0.65)
 
 
 func _build_outside() -> void:
 	_add_lro_moon_surface()
-	var outside_center := Vector3(0, -0.17, 29)
+	var outside_center := Vector3(0, -0.17, 0)
 	var surface := StaticBody3D.new()
 	surface.name = "Dust covered landing apron"
 	surface.position = outside_center
 	var disc_mesh := CylinderMesh.new()
-	disc_mesh.top_radius = 12.0
-	disc_mesh.bottom_radius = 12.4
+	disc_mesh.top_radius = 330.0
+	disc_mesh.bottom_radius = 330.5
 	disc_mesh.height = 0.18
-	disc_mesh.radial_segments = 72
+	disc_mesh.radial_segments = 192
 	var disc_instance := MeshInstance3D.new()
 	disc_instance.mesh = disc_mesh
 	var regolith_material := StandardMaterial3D.new()
 	regolith_material.albedo_color = Color("#98958d")
 	regolith_material.albedo_texture = load("res://assets/nasa/moon_surface/apollo11_regolith_closeup.jpg") as Texture2D
-	regolith_material.uv1_scale = Vector3(4.0, 4.0, 1.0)
+	regolith_material.uv1_scale = Vector3(32.0, 32.0, 1.0)
 	regolith_material.roughness = 1.0
 	regolith_material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 	disc_instance.material_override = regolith_material
 	surface.add_child(disc_instance)
 	var disc_shape := CollisionShape3D.new()
 	var cylinder := CylinderShape3D.new()
-	cylinder.radius = 12.0
+	cylinder.radius = 330.0
 	cylinder.height = 0.18
 	disc_shape.shape = cylinder
 	surface.add_child(disc_shape)
@@ -320,6 +327,7 @@ func _build_outside() -> void:
 	_add_solar_panels()
 	_add_satellite_dish()
 	_add_lunar_surface_rocks()
+	_add_moon_route()
 
 
 func _add_lro_moon_surface() -> void:
@@ -337,11 +345,14 @@ func _add_lro_moon_surface() -> void:
 
 
 func _add_lunar_surface_rocks() -> void:
-	# Keep a clear path from the airlock; low, irregular rocks sit around the playable apron.
+	# Rock clusters sit beyond the marked return loop and leave the trail unobstructed.
 	var rock_sites: Array[Vector3] = [
-		Vector3(-15.5, -0.08, 23.5), Vector3(15.0, -0.08, 22.5),
-		Vector3(-16.0, -0.08, 36.0), Vector3(15.5, -0.08, 39.0),
-		Vector3(-11.5, -0.08, 45.0), Vector3(10.5, -0.08, 45.5)
+		Vector3(-25.0, -0.08, 48.0), Vector3(28.0, -0.08, 58.0),
+		Vector3(-34.0, -0.08, 110.0), Vector3(38.0, -0.08, 144.0),
+		Vector3(-29.0, -0.08, 188.0), Vector3(31.0, -0.08, 205.0),
+		Vector3(-172.0, -0.08, 102.0), Vector3(176.0, -0.08, 112.0),
+		Vector3(-120.0, -0.08, -118.0), Vector3(124.0, -0.08, -126.0),
+		Vector3(-48.0, -0.08, -185.0), Vector3(52.0, -0.08, -194.0)
 	]
 	for index in range(rock_sites.size()):
 		var rock_body := StaticBody3D.new()
@@ -368,11 +379,48 @@ func _add_lunar_surface_rocks() -> void:
 		world_root.add_child(rock_body)
 
 
+func _add_moon_route() -> void:
+	# A broad, continuous loop circles the base and returns to the airlock approach.
+	# Its 785 m lap is sized for a short exploration walk in this game scale.
+	var center := Vector2.ZERO
+	var radius := 125.0
+	var segments := 128
+	for segment in range(segments):
+		var angle := TAU * float(segment) / float(segments)
+		var next_angle := TAU * float(segment + 1) / float(segments)
+		var mid_angle := (angle + next_angle) * 0.5
+		var point := center + Vector2(cos(mid_angle), sin(mid_angle)) * radius
+		var segment_length := radius * (next_angle - angle) + 1.2
+		var trail_segment := _make_box(world_root, "Lunar return loop trail", Vector3(point.x, -0.015, point.y), Vector3(7.0, 0.08, segment_length), Color("#716d66"), -mid_angle)
+		trail_segment.collision_layer = 1
+	# Join the exterior airlock to the closest loop point with an uninterrupted path.
+	_make_box(world_root, "Airlock to lunar loop trail", Vector3(0.0, -0.015, 71.0), Vector3(7.0, 0.08, 108.0), Color("#716d66"))
+	# Direction beacons and science stops make the long route legible at a distance.
+	for marker in range(8):
+		var angle := TAU * float(marker) / 8.0
+		var point := center + Vector2(cos(angle), sin(angle)) * radius
+		var beacon_point := point + Vector2(-sin(angle), cos(angle)) * 6.0
+		_make_solid_box("Lunar route beacon post", Vector3(beacon_point.x, 1.35, beacon_point.y), Vector3(0.24, 2.7, 0.24), Color("#bbc4bd"))
+		_make_emissive_box("Lunar route beacon", Vector3(beacon_point.x, 2.8, beacon_point.y), Vector3(0.5, 0.28, 0.5), Color("#5be0ce"), 1.0)
+		var direction_tile := _make_visual_box("Lunar route direction tile", Vector3(point.x, 0.04, point.y), Vector3(2.0, 0.025, 0.5), Color("#d9c17e"))
+		direction_tile.rotation.y = -angle
+	_add_route_photo_shelter()
+
+
+func _add_route_photo_shelter() -> void:
+	var shelter := Vector3(28.0, 0.0, 66.0)
+	_make_solid_box("Lunar field shelter plinth", shelter + Vector3(0.0, 0.16, 0.0), Vector3(12.0, 0.32, 5.0), Color("#6f7775"))
+	for x: float in [-5.4, 5.4]:
+		_make_solid_box("Field shelter support", shelter + Vector3(x, 1.6, 0.0), Vector3(0.22, 3.2, 0.22), Color("#9aa7a2"))
+	_make_solid_box("Field shelter header", shelter + Vector3(0.0, 3.18, 0.0), Vector3(11.0, 0.22, 0.22), Color("#9aa7a2"))
+	_make_textured_screen("Apollo surface panorama at field shelter", shelter + Vector3(0.0, 2.05, 0.16), Vector2(9.8, 1.24), "res://assets/nasa/moon_surface/apollo17_station6_panorama.jpg", false)
+
+
 func _add_nasa_habitat_model() -> void:
 	# Official NASA/LaRC HDU reference model, assembled from its two published GLB parts.
 	var model_body := StaticBody3D.new()
 	model_body.name = "NASA Habitat Demonstration Unit reference model"
-	model_body.position = Vector3(8.0, 2.7, 35.0)
+	model_body.position = Vector3(12.0, 2.7, 35.0)
 	var body_collision := CollisionShape3D.new()
 	var body_shape := BoxShape3D.new()
 	body_shape.size = Vector3(12.2, 5.4, 7.5)
@@ -474,6 +522,21 @@ func _add_room_props() -> void:
 	_add_sleeping_room_props()
 	_add_airlock_props()
 	_add_plant_growth_room_props()
+	_add_room_photo_panels()
+
+
+func _build_habitat_foundation() -> void:
+	# A continuous structural deck under modules and connectors prevents falls through seams.
+	_make_box(world_root, "Continuous habitat under-deck", Vector3(0.0, -0.20, -6.0), Vector3(55.0, 0.36, 58.0), Color("#596462"))
+
+
+func _add_room_photo_panels() -> void:
+	# Real NASA photographs add mission context to these rooms.
+	var lab_mural := _make_textured_screen("Apollo 17 lunar field photo mural in lab", Vector3(-23.78, 2.15, 0.0), Vector2(9.2, 1.35), "res://assets/nasa/moon_surface/apollo17_station6_panorama.jpg", false)
+	lab_mural.rotation.y = PI * 0.5
+	_make_visual_box("Medical photo panel surround", Vector3(-18.0, 2.05, -21.82), Vector3(3.5, 2.36, 0.08), Color("#394d55"))
+	var med_mural := _make_textured_screen("NASA ISS medical training photo mural", Vector3(-18.0, 2.05, -21.76), Vector2(3.2, 2.13), "res://assets/nasa/iss065e074846.jpg", false)
+	med_mural.rotation.y = 0.0
 
 
 func _add_plant_growth_room_props() -> void:
@@ -524,14 +587,15 @@ func _add_dining_props() -> void:
 		_make_solid_box("Wardroom seat", Vector3(seat_x, 0.47, -14.45), Vector3(0.92, 0.82, 0.78), Color("#546a70"))
 	for place_x: float in [-1.05, 1.05]:
 		_make_visual_box("Meal pouch", Vector3(place_x, 1.12, -15.8), Vector3(0.42, 0.16, 0.36), Color("#c99b64"))
-	for counter_x: float in [-4.8, -1.6, 1.6, 4.8]:
+	# Two side galley runs preserve the wide central exit to the garden.
+	for counter_x: float in [-4.8, 4.8]:
 		_make_solid_box("Galley lower cabinet", Vector3(counter_x, 0.58, -20.55), Vector3(2.75, 1.1, 1.05), Color("#718084"))
 		_make_visual_box("Galley cabinet door", Vector3(counter_x, 0.58, -19.99), Vector3(2.48, 0.78, 0.05), Color("#8f9d9a"))
-	_make_solid_box("Galley food preparation surface", Vector3(0.0, 1.18, -20.55), Vector3(12.8, 0.16, 1.18), Color("#c4cbc4"))
+		_make_solid_box("Galley food preparation surface", Vector3(counter_x, 1.18, -20.55), Vector3(2.9, 0.16, 1.18), Color("#c4cbc4"))
 	for shelf_level in range(2):
-		_make_solid_box("Galley overhead locker", Vector3(0.0, 2.15 + float(shelf_level) * 0.72, -21.45), Vector3(11.2, 0.58, 0.58), Color("#75888a"))
-	for item in range(8):
-		var food_x := -4.0 + float(item) * 1.1
+		for locker_x: float in [-4.8, 4.8]:
+			_make_solid_box("Galley overhead locker", Vector3(locker_x, 2.15 + float(shelf_level) * 0.72, -21.45), Vector3(2.7, 0.58, 0.58), Color("#75888a"))
+	for food_x: float in [-5.3, -4.3, 4.3, 5.3]:
 		_make_solid_box("Secured packaged food bin", Vector3(food_x, 1.52, -20.45), Vector3(0.68, 0.45, 0.55), Color("#c9a270"))
 		_make_visual_box("Food bin latch", Vector3(food_x, 1.52, -20.14), Vector3(0.18, 0.16, 0.035), Color("#506a70"))
 
@@ -567,10 +631,19 @@ func _add_lab_props() -> void:
 	for sample_x: float in [-20.8, -19.5, -16.5, -15.2]:
 		_make_visual_cylinder("Sealed lunar dust sample canister", Vector3(sample_x, 1.27, 4.0), 0.27, 0.58, Color("#b7b99b"))
 		_make_visual_cylinder("Sample canister locking cap", Vector3(sample_x, 1.59, 4.0), 0.3, 0.1, Color("#667982"))
-	_make_solid_box("Seismometer isolation plinth", Vector3(-18.0, 0.18, 0.0), Vector3(2.7, 0.32, 2.7), Color("#626e71"))
-	_make_solid_box("Moonquake seismometer", Vector3(-18.0, 0.8, 0.0), Vector3(1.8, 0.92, 1.7), Color("#aeb8b4"))
-	_make_visual_box("Seismometer readout", Vector3(-18.0, 1.12, -0.86), Vector3(0.92, 0.42, 0.045), Color("#17343c"))
+	_make_solid_box("NASA habitat model exhibit plinth", Vector3(-18.0, 0.18, 0.0), Vector3(2.7, 0.32, 2.7), Color("#626e71"))
+	_make_visual_box("Habitat model display label", Vector3(-18.0, 0.48, -0.86), Vector3(1.65, 0.18, 0.045), Color("#17343c"))
 	_make_textured_screen("Moonquake waveform display", Vector3(-18.0, 1.12, -0.888), Vector2(0.82, 0.32), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
+	for model_path: String in ["res://assets/nasa/habitat-demonstration-unit-part-1.glb", "res://assets/nasa/habitat-demonstration-unit-part-2.glb"]:
+		var habitat_scene := load(model_path) as PackedScene
+		if habitat_scene != null:
+			var exhibit := habitat_scene.instantiate()
+			exhibit.name = model_path.get_file().get_basename().replace("-", " ") + " scale model"
+			exhibit.scale = Vector3.ONE * 0.001
+			exhibit.position = Vector3(-18.0, 0.72, 0.37)
+			world_root.add_child(exhibit)
+		else:
+			push_warning("NASA habitat model for the lab display could not be loaded: " + model_path)
 	for case_index in range(4):
 		var case_x := -20.5 + float(case_index % 2) * 4.8
 		var case_z := 2.9 + float(case_index / 2) * 2.0
@@ -578,17 +651,19 @@ func _add_lab_props() -> void:
 
 
 func _add_main_room_props() -> void:
-	# Three readable workstation desks, with flat picture screens, monitor stands and keyboards.
-	for console_index in range(3):
-		var console_x := -4.8 + float(console_index) * 4.8
-		_make_solid_box("Command workstation desk", Vector3(console_x, 0.72, 4.25), Vector3(3.25, 0.16, 1.15), Color("#8b9997"))
-		_make_solid_box("Workstation pedestal", Vector3(console_x, 0.34, 4.25), Vector3(0.62, 0.72, 0.82), Color("#66777b"))
-		_make_solid_box("Monitor stand", Vector3(console_x, 1.12, 3.93), Vector3(0.16, 0.72, 0.16), Color("#596d73"))
-		_make_solid_box("Monitor housing", Vector3(console_x, 1.76, 3.94), Vector3(1.72, 1.18, 0.2), Color("#3c4e54"))
-		_make_textured_screen("NASA reference data on workstation", Vector3(console_x, 1.76, 3.825), Vector2(1.48, 0.88), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
-		_make_visual_box("Workstation keyboard", Vector3(console_x, 0.84, 4.65), Vector3(0.92, 0.055, 0.3), Color("#394a50"))
-		_make_solid_box("Workstation compute unit", Vector3(console_x + 1.22, 1.18, 4.0), Vector3(0.42, 0.75, 0.58), Color("#596a6e"))
-		_make_visual_box("Compute unit status lights", Vector3(console_x + 1.22, 1.43, 3.696), Vector3(0.22, 0.07, 0.025), Color("#6acbc4"))
+	# Three readable workstations sit to either side of the straight airlock route.
+	var console_positions: Array[Vector2] = [Vector2(-4.8, 2.5), Vector2(4.8, 2.5), Vector2(-4.8, -2.5)]
+	for console_position: Vector2 in console_positions:
+		var console_x := console_position.x
+		var console_z := console_position.y
+		_make_solid_box("Command workstation desk", Vector3(console_x, 0.72, console_z), Vector3(3.25, 0.16, 1.15), Color("#8b9997"))
+		_make_solid_box("Workstation pedestal", Vector3(console_x, 0.34, console_z), Vector3(0.62, 0.72, 0.82), Color("#66777b"))
+		_make_solid_box("Monitor stand", Vector3(console_x, 1.12, console_z - 0.32), Vector3(0.16, 0.72, 0.16), Color("#596d73"))
+		_make_solid_box("Monitor housing", Vector3(console_x, 1.76, console_z - 0.31), Vector3(1.72, 1.18, 0.2), Color("#3c4e54"))
+		_make_textured_screen("NASA reference data on workstation", Vector3(console_x, 1.76, console_z - 0.425), Vector2(1.48, 0.88), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
+		_make_visual_box("Workstation keyboard", Vector3(console_x, 0.84, console_z + 0.4), Vector3(0.92, 0.055, 0.3), Color("#394a50"))
+		_make_solid_box("Workstation compute unit", Vector3(console_x + 1.22, 1.18, console_z - 0.25), Vector3(0.42, 0.75, 0.58), Color("#596a6e"))
+		_make_visual_box("Compute unit status lights", Vector3(console_x + 1.22, 1.43, console_z - 0.554), Vector3(0.22, 0.07, 0.025), Color("#6acbc4"))
 	_make_solid_box("Main room life support cabinet", Vector3(6.55, 1.15, 2.8), Vector3(1.65, 2.3, 1.4), Color("#6e8386"))
 	_make_emissive_box("Air filter status screen", Vector3(5.7, 1.55, 2.8), Vector3(0.04, 0.58, 0.76), Color("#63d5dc"), 0.4)
 	for vent_row in range(4):
@@ -596,7 +671,7 @@ func _add_main_room_props() -> void:
 
 
 func _add_sleeping_room_props() -> void:
-	for bunk_x: float in [14.5, 21.5]:
+	for bunk_x: float in [15.5, 21.5]:
 		for level in range(2):
 			var mattress_y := 0.48 + float(level) * 1.35
 			_make_solid_box("Bunk bed frame", Vector3(bunk_x, mattress_y, -1.1), Vector3(3.0, 0.18, 3.7), Color("#77888b"))
@@ -732,7 +807,7 @@ func _build_hud() -> void:
 	layer.add_child(title)
 	room_label = _make_label("AREA  /  MAIN ROOM", Vector2(22, 43), 13, Color("#ffffff"))
 	layer.add_child(room_label)
-	var objective := _make_label("Explore the habitat  /  Mouse to look  /  ESC to release cursor", Vector2(22, 65), 11, Color("#b4c7ca"))
+	var objective := _make_label("Follow the lunar beacons around the Moon and return to the airlock  /  ESC to release cursor", Vector2(22, 65), 11, Color("#b4c7ca"))
 	layer.add_child(objective)
 	var controls := _make_label("MOVE  WASD / ARROWS      JUMP  SPACE      LOOK  MOUSE", Vector2.ZERO, 11, Color("#d3e3e4"))
 	controls.anchor_top = 1.0
@@ -773,13 +848,13 @@ func _make_label(text: String, label_position: Vector2, font_size: int, color: C
 
 func _room_id_at_player() -> String:
 	var player_position := Vector2(player.global_position.x, player.global_position.z)
-	if player_position.distance_to(Vector2(0, 29)) <= 16.5:
-		return "outside"
 	for room: Dictionary in ROOMS:
 		var center: Vector2 = room["center"]
 		var room_size: Vector2 = room["size"]
 		if absf(player_position.x - center.x) <= room_size.x * 0.5 and absf(player_position.y - center.y) <= room_size.y * 0.5:
 			return str(room["id"])
+	if absf(player_position.x) > 27.5 or player_position.y > 23.0 or player_position.y < -35.0:
+		return "outside"
 	return "hallway"
 
 

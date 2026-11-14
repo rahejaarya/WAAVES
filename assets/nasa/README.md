@@ -30,6 +30,11 @@ horizon for this playable prototype.
 - `apollo_moon_surface_nasa.jpg` and `lro_lunar_color_mosaic.jpg`: NASA lunar
   surface and LRO color-mosaic reference images used on in-game instrument
   displays.
+- `iss065e074846.jpg`: NASA photograph of Expedition 65 astronauts practicing a
+  medical emergency response aboard the ISS, displayed in the medical bay.
+  Source: https://www.nasa.gov/image-article/expedition-65-astronauts-train-for-medical-emergency/
+- The NASA habitat GLB parts are also displayed as a small 3D reference model
+  in the lab.
 - NASA image and media usage guidance: https://www.nasa.gov/nasa-brand-center/images-and-media/
 
 NASA-derived assets are credited here. Their use does not imply NASA endorsement
