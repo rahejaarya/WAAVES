@@ -1,19 +1,96 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://player.gd" id="1_player_script"]
-[ext_resource type="Texture2D" path="res://astronaut.svg" id="2_astronaut"]
 
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
-size = Vector2(36, 54)
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_suit"]
+albedo_color = Color(0.84, 0.91, 0.91, 1)
+roughness = 0.82
 
-[node name="Player" type="CharacterBody2D"]
-z_index = 10
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_visor"]
+albedo_color = Color(0.12, 0.62, 0.78, 1)
+metallic = 0.18
+roughness = 0.32
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pack"]
+albedo_color = Color(0.43, 0.55, 0.59, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_boots"]
+albedo_color = Color(0.12, 0.23, 0.30, 1)
+roughness = 0.88
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_astronaut"]
+radius = 0.42
+height = 1.75
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_suit"]
+material = SubResource("StandardMaterial3D_suit")
+radius = 0.46
+height = 1.65
+
+[sub_resource type="SphereMesh" id="SphereMesh_helmet"]
+material = SubResource("StandardMaterial3D_suit")
+radius = 0.45
+height = 0.9
+
+[sub_resource type="SphereMesh" id="SphereMesh_visor"]
+material = SubResource("StandardMaterial3D_visor")
+radius = 0.29
+height = 0.29
+
+[sub_resource type="BoxMesh" id="BoxMesh_backpack"]
+material = SubResource("StandardMaterial3D_pack")
+size = Vector3(0.68, 0.78, 0.38)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_arm"]
+material = SubResource("StandardMaterial3D_suit")
+radius = 0.15
+height = 0.76
+
+[sub_resource type="BoxMesh" id="BoxMesh_boot"]
+material = SubResource("StandardMaterial3D_boots")
+size = Vector3(0.32, 0.26, 0.44)
+
+[node name="Player" type="CharacterBody3D"]
 script = ExtResource("1_player_script")
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
-z_index = 10
-texture = ExtResource("2_astronaut")
-scale = Vector2(0.45, 0.45)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+position = Vector3(0, 0.88, 0)
+shape = SubResource("CapsuleShape3D_astronaut")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource("RectangleShape2D_player")
+[node name="Astronaut" type="Node3D" parent="."]
+
+[node name="Suit" type="MeshInstance3D" parent="Astronaut"]
+position = Vector3(0, 0.86, 0)
+mesh = SubResource("CapsuleMesh_suit")
+
+[node name="Helmet" type="MeshInstance3D" parent="Astronaut"]
+position = Vector3(0, 1.58, -0.04)
+mesh = SubResource("SphereMesh_helmet")
+
+[node name="Visor" type="MeshInstance3D" parent="Astronaut"]
+position = Vector3(0, 1.59, -0.37)
+scale = Vector3(1, 0.68, 0.48)
+mesh = SubResource("SphereMesh_visor")
+
+[node name="Backpack" type="MeshInstance3D" parent="Astronaut"]
+position = Vector3(0, 0.97, 0.47)
+mesh = SubResource("BoxMesh_backpack")
+
+[node name="LeftArm" type="MeshInstance3D" parent="Astronaut"]
+position = Vector3(-0.53, 0.9, 0)
+rotation = Vector3(0, 0, 1.5708)
+mesh = SubResource("CapsuleMesh_arm")
+
+[node name="RightArm" type="MeshInstance3D" parent="Astronaut"]
+position = Vector3(0.53, 0.9, 0)
+rotation = Vector3(0, 0, 1.5708)
+mesh = SubResource("CapsuleMesh_arm")
+
+[node name="LeftBoot" type="MeshInstance3D" parent="Astronaut"]
+position = Vector3(-0.23, 0.17, 0.08)
+mesh = SubResource("BoxMesh_boot")
+
+[node name="RightBoot" type="MeshInstance3D" parent="Astronaut"]
+position = Vector3(0.23, 0.17, 0.08)
+mesh = SubResource("BoxMesh_boot")
