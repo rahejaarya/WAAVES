@@ -85,7 +85,10 @@ func _confine_to_walkable_area() -> void:
 	var is_walkable := false
 
 	for rect: Rect2 in WALKABLE_RECTS:
-		var safe_rect := rect.grow(-PLAYER_RADIUS)
+		# The corridor decks overlap room floors by 0.55 m. Shrinking both
+		# rectangles by the full capsule radius created a gap at every doorway,
+		# so the confinement snap kept pushing the player back into the room.
+		var safe_rect := rect.grow(-PLAYER_RADIUS * 0.5)
 		if safe_rect.has_point(position_on_plane):
 			is_walkable = true
 			break
