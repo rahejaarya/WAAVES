@@ -181,6 +181,8 @@ func interact_with_station(station_id: String) -> void:
 
 func _set_board_open(open: bool) -> void:
 	board.visible = open
+	if open:
+		_scroll_to_top()
 	if is_instance_valid(player):
 		player.set_process(not open and not ended)
 		if open:
@@ -278,10 +280,21 @@ func _rebuild_choices() -> void:
 		choice_list.add_child(button)
 
 
+# Every time the board opens or changes page, start at the top instead of where it was
+# last scrolled. Done again after layout, since the page content is rebuilt this frame.
+func _scroll_to_top() -> void:
+	mission_scroll.scroll_vertical = 0
+	manual_panel.scroll_vertical = 0
+	await get_tree().process_frame
+	mission_scroll.scroll_vertical = 0
+	manual_panel.scroll_vertical = 0
+
+
 func _toggle_manual() -> void:
 	manual_panel.visible = not manual_panel.visible
 	manual_button.text = "Back to tasks" if manual_panel.visible else "How to Play"
 	_refresh_board()
+	_scroll_to_top()
 
 
 func _choose_action(index: int) -> void:
@@ -832,6 +845,8 @@ func _finish_minigame() -> void:
 	pinned_action_id = ""
 	current_action = {}
 	complete_action(action)
+	# The board switches from the minigame to the result/next choices: show it from the top.
+	_scroll_to_top()
 
 
 # Applies a finished choice: flags, points, deaths, then moves the clock on.
@@ -955,6 +970,9 @@ func _build_slot_options() -> Array[Dictionary]:
 		[2, 1]:
 			options.append(_action("inspect_filters"))
 		[2, 2]:
+			# Second chance to find the dust if the morning task wasn't the filter check.
+			if not filters_inspected:
+				options.append(_action("inspect_filters"))
 			if power_picks >= 2:
 				options.append(_action("inspect_power"))
 		[3, 1]:
