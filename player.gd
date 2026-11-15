@@ -5,30 +5,19 @@ const GRAVITY := 18.0
 const JUMP_SPEED := 6.5
 const JUMP_BUFFER_SECONDS := 0.14
 const PLAYER_RADIUS := 0.42
-const WALKABLE_RECTS := [
-	Rect2(Vector2(-6.0, -33.0), Vector2(12.0, 10.0)),
-	Rect2(Vector2(-8.0, -22.0), Vector2(16.0, 12.0)),
-	Rect2(Vector2(-24.0, -22.0), Vector2(12.0, 12.0)),
-	Rect2(Vector2(12.0, -22.0), Vector2(12.0, 12.0)),
-	Rect2(Vector2(-24.0, -6.0), Vector2(12.0, 12.0)),
-	Rect2(Vector2(-8.0, -6.0), Vector2(16.0, 12.0)),
-	Rect2(Vector2(12.0, -6.0), Vector2(12.0, 12.0)),
-	Rect2(Vector2(-4.0, 9.0), Vector2(8.0, 8.0)),
-	Rect2(Vector2(-1.1, -10.55), Vector2(2.2, 5.1)),
-	Rect2(Vector2(-1.1, -23.05), Vector2(2.2, 2.1)),
-	Rect2(Vector2(-19.1, -10.55), Vector2(2.2, 5.1)),
-	Rect2(Vector2(-11.55, -17.1), Vector2(5.1, 2.2)),
-	Rect2(Vector2(6.45, -17.1), Vector2(5.1, 2.2)),
-	Rect2(Vector2(17.1, -10.55), Vector2(2.2, 5.1)),
-	Rect2(Vector2(-11.55, -1.1), Vector2(5.1, 2.2)),
-	Rect2(Vector2(6.45, -1.1), Vector2(5.1, 2.2)),
-	Rect2(Vector2(-1.1, 6.5), Vector2(2.2, 4.1))
-]
-const OUTSIDE_CENTER := Vector2(0.0, 29.0)
-const OUTSIDE_RADIUS := 17.0
+# Anywhere at least this far from every room / hall floor is the open lunar
+# surface, which has no invisible boundary. (A player standing against an outer
+# wall is ~0.58 m from the room edge: half the wall plus the capsule radius.)
+const OUTSIDE_CLEARANCE := 0.5
 
 @onready var astronaut: Node3D = $Astronaut
 
+# Room floors and hallway decks, set by main.gd from the same ROOMS / LINKS data
+# that builds the level, so the walkable area always matches the hallways.
+var walkable_rects: Array[Rect2] = []
+# Strips through doors that lead outside. Always walkable, but they don't count
+# as "the habitat" when deciding whether you are out on the open surface.
+var door_exit_rects: Array[Rect2] = []
 var jump_buffer := 0.0
 var walk_phase := 0.0
 
@@ -79,12 +68,25 @@ func _physics_process(delta: float) -> void:
 
 
 func _confine_to_walkable_area() -> void:
+	if walkable_rects.is_empty():
+		return
 	var position_on_plane := Vector2(global_position.x, global_position.z)
 	var nearest_position := position_on_plane
 	var nearest_distance_squared := INF
 	var is_walkable := false
+	var near_habitat := false
 
-	for rect: Rect2 in WALKABLE_RECTS:
+	for rect: Rect2 in door_exit_rects:
+		if rect.has_point(position_on_plane):
+			return
+
+	for rect: Rect2 in walkable_rects:
+		var edge_point := Vector2(
+			clampf(position_on_plane.x, rect.position.x, rect.end.x),
+			clampf(position_on_plane.y, rect.position.y, rect.end.y)
+		)
+		if position_on_plane.distance_to(edge_point) < OUTSIDE_CLEARANCE:
+			near_habitat = true
 		# The corridor decks overlap room floors by 0.55 m. Shrinking both
 		# rectangles by the full capsule radius created a gap at every doorway,
 		# so the confinement snap kept pushing the player back into the room.
@@ -101,15 +103,8 @@ func _confine_to_walkable_area() -> void:
 			nearest_position = rect_position
 			nearest_distance_squared = distance_squared
 
-	var safe_outside_radius := OUTSIDE_RADIUS - PLAYER_RADIUS
-	var outside_offset := position_on_plane - OUTSIDE_CENTER
-	if outside_offset.length_squared() <= safe_outside_radius * safe_outside_radius:
-		is_walkable = true
-	else:
-		var outside_position := OUTSIDE_CENTER + outside_offset.normalized() * safe_outside_radius
-		var outside_distance_squared := position_on_plane.distance_squared_to(outside_position)
-		if outside_distance_squared < nearest_distance_squared:
-			nearest_position = outside_position
+	if not is_walkable and not near_habitat:
+		is_walkable = true  # Out on the open surface: no boundary.
 
 	if not is_walkable:
 		var corrected_position := global_position

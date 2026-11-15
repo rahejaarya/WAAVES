@@ -15,7 +15,7 @@ const ROOMS := [
 	{"id": "med", "title": "MEDICAL BAY", "center": Vector2(-18, -16), "size": Vector2(12, 12), "doors": ["east", "south"], "floor": Color("#596564")},
 	{"id": "lab", "title": "LAB", "center": Vector2(-18, 0), "size": Vector2(12, 12), "doors": ["north", "east"], "floor": Color("#575861")},
 	{"id": "restroom", "title": "RESTROOM", "center": Vector2(18, -16), "size": Vector2(12, 12), "doors": ["west", "south"], "floor": Color("#5c6260")},
-	{"id": "sleep", "title": "CREW QUARTERS", "center": Vector2(18, 0), "size": Vector2(12, 12), "doors": ["north", "west"], "floor": Color("#5b6065")},
+	{"id": "sleep", "title": "BEDROOM", "center": Vector2(18, 0), "size": Vector2(12, 12), "doors": ["north", "west"], "floor": Color("#5b6065")},
 	{"id": "airlock", "title": "AIRLOCK", "center": Vector2(0, 13), "size": Vector2(8, 8), "doors": ["north", "south"], "floor": Color("#535c5d")}
 ]
 
@@ -41,6 +41,8 @@ var station_targets: Array[StaticBody3D] = []
 var materials: Dictionary = {}
 var soft_edge_meshes: Dictionary = {}
 var rooms_by_id: Dictionary = {}
+var walkable_rects: Array[Rect2] = []
+var door_exit_rects: Array[Rect2] = []
 
 
 func _ready() -> void:
@@ -56,6 +58,8 @@ func _ready() -> void:
 	_build_rooms()
 	_build_habitat_foundation()
 	_build_corridors()
+	player.set("walkable_rects", walkable_rects)
+	player.set("door_exit_rects", door_exit_rects)
 	_build_outside()
 	_add_room_props()
 	station_targets.clear()
@@ -73,7 +77,7 @@ func _process(_delta: float) -> void:
 	if not is_instance_valid(player):
 		return
 	var current_room_id := _room_id_at_player()
-	room_label.text = "AREA  /  " + _room_title(current_room_id)
+	room_label.text = "YOU ARE IN  /  " + _room_title(current_room_id)
 	minimap.set("current_room_id", current_room_id)
 	_update_station_hover()
 
@@ -116,6 +120,9 @@ func _build_environment() -> void:
 func _build_rooms() -> void:
 	for room: Dictionary in ROOMS:
 		_build_room(room)
+		var room_center: Vector2 = room["center"]
+		var room_size: Vector2 = room["size"]
+		walkable_rects.append(Rect2(room_center - room_size * 0.5, room_size))
 
 
 func _build_room(room: Dictionary) -> void:
@@ -265,6 +272,7 @@ func _build_corridors() -> void:
 	# offset prevents coplanar floor surfaces from z-fighting at room joins.
 	var corridor_deck_y := -FLOOR_THICKNESS * 0.5 + 0.025
 	var doorway_overlap := 0.55
+	var linked_doors: Array[String] = []
 	for link: Array in LINKS:
 		var first: Dictionary = rooms_by_id[link[0]]
 		var second: Dictionary = rooms_by_id[link[1]]
@@ -278,19 +286,29 @@ func _build_corridors() -> void:
 		if not first["doors"].has(first_side) or not second["doors"].has(second_side):
 			push_error("Unaligned habitat link: %s -> %s" % [first["id"], second["id"]])
 			continue
+		linked_doors.append("%s:%s" % [first["id"], first_side])
+		linked_doors.append("%s:%s" % [second["id"], second_side])
 		var corridor_center := Vector2.ZERO
 		var corridor_size := Vector2.ZERO
 		if absf(delta.x) > absf(delta.y):
 			var length := absf(delta.x) - (first_size.x + second_size.x) * 0.5 + doorway_overlap * 2.0
 			if length <= 0.05:
 				continue
-			corridor_center = Vector2((first_center.x + second_center.x) * 0.5, (first_center.y + second_center.y) * 0.5)
+			# Centre the hall in the gap between the two walls, not between the room
+			# centres; otherwise rooms of different sizes leave a gap at one end.
+			var x_dir := signf(delta.x)
+			var first_wall_x := first_center.x + x_dir * first_size.x * 0.5
+			var second_wall_x := second_center.x - x_dir * second_size.x * 0.5
+			corridor_center = Vector2((first_wall_x + second_wall_x) * 0.5, first_center.y)
 			corridor_size = Vector2(length, DOOR_WIDTH)
 		else:
 			var length := absf(delta.y) - (first_size.y + second_size.y) * 0.5 + doorway_overlap * 2.0
 			if length <= 0.05:
 				continue
-			corridor_center = Vector2(first_center.x, (first_center.y + second_center.y) * 0.5)
+			var z_dir := signf(delta.y)
+			var first_wall_z := first_center.y + z_dir * first_size.y * 0.5
+			var second_wall_z := second_center.y - z_dir * second_size.y * 0.5
+			corridor_center = Vector2(first_center.x, (first_wall_z + second_wall_z) * 0.5)
 			corridor_size = Vector2(DOOR_WIDTH, length)
 		_make_box(
 			world_root,
@@ -300,6 +318,27 @@ func _build_corridors() -> void:
 			CORRIDOR_COLOR
 		)
 		_build_corridor_shell(first, second, corridor_center, corridor_size, absf(delta.x) > absf(delta.y))
+		walkable_rects.append(Rect2(corridor_center - corridor_size * 0.5, corridor_size))
+	# Doors that lead outside (like the airlock's outer door) get a short walkable
+	# strip through the doorway onto the lunar surface.
+	for room: Dictionary in ROOMS:
+		for side: String in room["doors"]:
+			if linked_doors.has("%s:%s" % [room["id"], side]):
+				continue
+			var room_center: Vector2 = room["center"]
+			var room_size: Vector2 = room["size"]
+			var exit_depth := 2.0
+			var exit_rect: Rect2
+			match side:
+				"north":
+					exit_rect = Rect2(room_center.x - DOOR_WIDTH * 0.5, room_center.y - room_size.y * 0.5 - exit_depth, DOOR_WIDTH, exit_depth + 0.5)
+				"south":
+					exit_rect = Rect2(room_center.x - DOOR_WIDTH * 0.5, room_center.y + room_size.y * 0.5 - 0.5, DOOR_WIDTH, exit_depth + 0.5)
+				"east":
+					exit_rect = Rect2(room_center.x + room_size.x * 0.5 - 0.5, room_center.y - DOOR_WIDTH * 0.5, exit_depth + 0.5, DOOR_WIDTH)
+				_:
+					exit_rect = Rect2(room_center.x - room_size.x * 0.5 - exit_depth, room_center.y - DOOR_WIDTH * 0.5, exit_depth + 0.5, DOOR_WIDTH)
+			door_exit_rects.append(exit_rect)
 
 
 func _build_corridor_shell(first: Dictionary, _second: Dictionary, center: Vector2, size: Vector2, runs_along_x: bool) -> void:
@@ -476,12 +515,12 @@ func _add_solar_panels() -> void:
 func _add_exterior_task_stations() -> void:
 	# Field tasks each have a physical, labeled target so the Mission Control
 	# destination matches the equipment the player sees outside.
-	_add_exterior_station("Neutron spectrometer rover", "neutron_station", Vector3(-7.0, 0.0, 23.0), "NEUTRON SPECTROMETER\nTransect console")
-	_add_exterior_station("Rover battery service cart", "rover_station", Vector3(7.0, 0.0, 23.0), "ROVER POWER\nBattery / connectors")
-	_add_exterior_station("Surface environment instrument", "field_station", Vector3(12.0, 0.0, 27.0), "SURFACE STATION\nRadiation / thermal")
-	_add_exterior_station("Lunar sample collection case", "sample_station", Vector3(-12.0, 0.0, 27.0), "SAMPLE CACHE\nRock / regolith")
-	_add_exterior_station("Hull inspection and patch kit", "hull_station", Vector3(20.0, 0.0, 36.0), "HULL INSPECTION\nUltrasound / patch kit")
-	_add_exterior_station("Solar array service terminal", "solar_station", Vector3(-7.8, 0.0, 30.5), "SOLAR ARRAY\nPointing / output")
+	_add_exterior_station("Neutron spectrometer rover", "neutron_station", Vector3(-7.0, 0.0, 23.0), "NEUTRON SCANNER\nFinds hidden ice")
+	_add_exterior_station("Rover battery service cart", "rover_station", Vector3(7.0, 0.0, 23.0), "ROVER BATTERY\nCharging cart")
+	_add_exterior_station("Surface environment instrument", "field_station", Vector3(12.0, 0.0, 27.0), "SCIENCE SENSORS\nOutdoor tools")
+	_add_exterior_station("Lunar sample collection case", "sample_station", Vector3(-12.0, 0.0, 27.0), "ROCK SAMPLES\nCollection box")
+	_add_exterior_station("Hull inspection and patch kit", "hull_station", Vector3(22.5, 0.0, 35.0), "HULL TOOLS\nOutside wall")
+	_add_exterior_station("Solar array service terminal", "solar_station", Vector3(-7.8, 0.0, 30.5), "SOLAR PANELS\nPower controls")
 
 
 func _add_exterior_station(station_name: String, station_id: String, station_position: Vector3, label_text: String) -> void:
@@ -563,7 +602,7 @@ func _add_solar_service_detail(station_position: Vector3) -> void:
 func _add_satellite_dish() -> void:
 	var base := _make_box(world_root, "Communications antenna footing", Vector3(-10.0, 0.12, 35.0), Vector3(2.3, 0.24, 2.3), Color("#757e7c"))
 	base.set_meta("station_id", "eva_station")
-	_make_text_panel("COMMUNICATIONS\nAntenna / link check", Vector3(-10.0, 3.25, 33.7), Vector2(3.0, 0.66), 0.0)
+	_make_text_panel("ANTENNA\nTalk to Mission Control", Vector3(-10.0, 3.25, 33.7), Vector2(3.0, 0.66), 0.0)
 	base.position.y = -0.035
 	var mount := _make_box(world_root, "Antenna azimuth mount", Vector3(-10.0, 0.38, 35.0), Vector3(0.9, 0.34, 0.9), Color("#b8c2bf"))
 	var pedestal := _make_box(world_root, "Antenna mast", Vector3(-10.0, 1.25, 35.0), Vector3(0.22, 1.55, 0.22), Color("#aab5b2"))
@@ -641,7 +680,9 @@ func _add_room_props() -> void:
 
 func _build_habitat_foundation() -> void:
 	# A continuous structural deck under modules and connectors prevents falls through seams.
-	_make_box(world_root, "Continuous habitat under-deck", Vector3(0.0, -0.20, -6.0), Vector3(55.0, 0.36, 58.0), Color("#596462"))
+	# Its top sits flush with the lunar surface (y = -0.08) so walking off it outside
+	# the airlock has no ledge to catch on.
+	_make_box(world_root, "Continuous habitat under-deck", Vector3(0.0, -0.26, -6.0), Vector3(55.0, 0.36, 58.0), Color("#596462"))
 
 
 func _add_room_photo_panels() -> void:
@@ -679,7 +720,7 @@ func _add_plant_growth_room_props() -> void:
 					leaf.scale = Vector3(1.0, 0.55, 0.72)
 	var garden_unit := _make_solid_box("Garden nutrient and water service unit", Vector3(0.0, 1.15, -31.45), Vector3(3.2, 2.2, 0.8), Color("#7b8b84"))
 	garden_unit.set_meta("station_id", "garden")
-	_make_text_panel("CROP SERVICE\nNutrients / flow", Vector3(0.0, 2.5, -31.0), Vector2(2.5, 0.56), 0.0)
+	_make_text_panel("GARDEN\nPlant care", Vector3(0.0, 2.5, -31.0), Vector2(2.5, 0.56), 0.0)
 	_add_status_panel_face(Vector3(0.0, 1.48, -31.0), 1.05, 0.56)
 	for gauge_x: float in [-1.15, 1.15]:
 		_add_gauge(Vector3(gauge_x, 1.48, -31.0), 0.16, Color("#74d6bf"))
@@ -706,7 +747,7 @@ func _add_med_bay_props() -> void:
 		_make_visual_box("Medical privacy curtain", Vector3(-21.3 + side * 1.68, 1.78, -17.0), Vector3(0.055, 1.75, 4.35), Color("#9ab6b4"))
 	var medical_analyzer := _make_solid_box("Specimen diagnostic analyzer", Vector3(-14.2, 0.82, -18.7), Vector3(2.1, 1.64, 1.35), Color("#87999a"))
 	medical_analyzer.set_meta("station_id", "medical")
-	_make_text_panel("MEDICAL BAY\nCrew diagnostics", Vector3(-14.2, 2.05, -18.0), Vector2(2.5, 0.58), 0.0)
+	_make_text_panel("MEDICAL BAY\nHealth checks", Vector3(-14.2, 2.05, -18.0), Vector2(2.5, 0.58), 0.0)
 	_add_status_panel_face(Vector3(-14.2, 1.28, -17.98), 1.52, 0.72)
 	for button_x: float in [-0.54, -0.18, 0.18, 0.54]:
 		_make_visual_cylinder("Analyzer tactile control", Vector3(-14.2 + button_x, 0.92, -17.99), 0.075, 0.05, Color("#d5b86e"))
@@ -810,7 +851,7 @@ func _add_lab_props() -> void:
 	_make_textured_screen("Moonquake waveform display", Vector3(-22.0, 1.12, 0.112), Vector2(0.82, 0.32), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
 	var lab_interaction := _make_solid_box("Laboratory task terminal", Vector3(-14.35, 1.7, -5.78), Vector3(2.5, 1.4, 0.16), Color("#243b42"))
 	lab_interaction.set_meta("station_id", "lab_console")
-	_make_text_panel("LAB WORKSTATION\nSamples / instruments", Vector3(-14.35, 2.65, -5.55), Vector2(3.2, 0.62), 0.0)
+	_make_text_panel("LAB\nScience bench", Vector3(-14.35, 2.65, -5.55), Vector2(3.2, 0.62), 0.0)
 	for model_path: String in ["res://assets/nasa/habitat-demonstration-unit-part-1.glb", "res://assets/nasa/habitat-demonstration-unit-part-2.glb"]:
 		var habitat_scene := load(model_path) as PackedScene
 		if habitat_scene != null:
@@ -852,8 +893,7 @@ func _add_seismometer_station() -> void:
 	sensor.set_meta("station_id", "seismometer")
 	_make_visual_cylinder("Seismometer leveling collar", Vector3(-22.0, 1.02, -1.15), 0.36, 0.12, Color("#697c7d"))
 	_make_visual_cylinder("Seismometer sensor cap", Vector3(-22.0, 1.14, -1.15), 0.23, 0.18, Color("#9ab2ad"))
-	_make_text_panel("LUNAR SEISMOMETER\nWaveform / calibration", Vector3(-22.0, 1.65, -1.15), Vector2(1.8, 0.48), 0.0)
-	_make_text_panel("SEISMOMETER\nDay 1 calibration / Day 3 impact / Day 5 quake", Vector3(-22.0, 2.25, -5.72), Vector2(4.2, 0.72), 0.0)
+	_make_text_panel("SEISMOMETER\nMoonquake detector", Vector3(-22.0, 1.65, -1.15), Vector2(1.8, 0.48), 0.0)
 	_make_textured_screen("Seismometer waveform instrument display", Vector3(-22.0, 1.72, -5.83), Vector2(2.0, 1.0), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
 
 
@@ -896,7 +936,7 @@ func _add_main_room_props() -> void:
 		_make_visual_box("Compute unit status lights", Vector3(console_x + 1.22, 1.43, console_z - 0.554), Vector3(0.22, 0.07, 0.025), Color("#6acbc4"))
 	var life_support := _make_solid_box("Main room life support cabinet", Vector3(6.55, 1.15, 2.8), Vector3(1.65, 2.3, 1.4), Color("#6e8386"))
 	life_support.set_meta("station_id", "life_support")
-	_make_text_panel("LIFE SUPPORT\nWater / O₂ / CO₂", Vector3(6.55, 2.65, 2.0), Vector2(2.7, 0.6), 0.0)
+	_make_text_panel("LIFE SUPPORT\nAir and water", Vector3(6.55, 2.65, 2.0), Vector2(2.7, 0.6), 0.0)
 	_make_visual_box("Main life-support service door", Vector3(5.69, 1.24, 2.8), Vector3(0.055, 1.45, 1.08), Color("#8f9f99"))
 	_add_status_panel_face(Vector3(5.64, 1.76, 2.8), 0.72, 0.4)
 	_add_gauge(Vector3(5.62, 1.05, 2.52), 0.13, Color("#73d7bb"))
@@ -924,7 +964,7 @@ func _add_sleeping_room_props() -> void:
 			if level == 0:
 				var sleep_panel := _make_solid_box("Crew bunk sleep control", Vector3(bunk_x, 1.35, -3.02), Vector3(1.25, 0.8, 0.16), Color("#27444a"))
 				sleep_panel.set_meta("station_id", "bed")
-				_make_text_panel("SLEEP\nPress E to end shift", Vector3(bunk_x, 1.35, -2.92), Vector2(1.12, 0.62), 0.0)
+				_make_text_panel("BED\nPress E to sleep", Vector3(bunk_x, 1.35, -2.92), Vector2(1.12, 0.62), 0.0)
 			_make_emissive_box("Bunk reading light", Vector3(bunk_x, mattress_y + 0.92, -2.92), Vector3(0.62, 0.055, 0.12), Color("#d8f7dd"), 0.28)
 		for post_x: float in [-1.3, 1.3]:
 			_make_visual_strut("Bunk bed support", Vector3(bunk_x + post_x, 0.12, -2.7), Vector3(bunk_x + post_x, 2.84, -2.7), 0.075, Color("#91a09e"))
@@ -949,7 +989,7 @@ func _add_airlock_props() -> void:
 		_make_visual_box("Airlock outer parked door leaf", Vector3(side * 2.35, 1.35, 16.72), Vector3(0.48, 2.45, 0.18), Color("#566d75"))
 	var filter_station := _make_solid_box("Airlock filter service panel", Vector3(3.0, 1.5, 13.0), Vector3(0.28, 2.3, 0.9), Color("#657e84"))
 	filter_station.set_meta("station_id", "airlock_filter")
-	_make_text_panel("AIRLOCK FILTERS\nInspect / clean", Vector3(3.0, 2.75, 12.45), Vector2(2.6, 0.58), 0.0)
+	_make_text_panel("AIR FILTERS\nAirlock", Vector3(3.0, 2.75, 12.45), Vector2(2.6, 0.58), 0.0)
 	_make_visual_box("Airlock control lights", Vector3(2.83, 1.85, 13.0), Vector3(0.06, 0.62, 0.48), Color("#72d7bf"))
 	_add_status_panel_face(Vector3(2.8, 1.82, 13.0), 0.55, 0.52)
 	for filter_z: float in [12.55, 13.0, 13.45]:
@@ -1177,9 +1217,9 @@ func _build_hud() -> void:
 
 	var title := _make_label("HABITAT ZERO", Vector2(22, 16), 19, Color("#baf9f3"))
 	layer.add_child(title)
-	room_label = _make_label("AREA  /  MAIN ROOM", Vector2(22, 43), 13, Color("#ffffff"))
+	room_label = _make_label("YOU ARE IN  /  MAIN ROOM", Vector2(22, 43), 13, Color("#ffffff"))
 	layer.add_child(room_label)
-	var objective := _make_label("Explore the habitat  /  TAB: mission control  /  ESC: release cursor", Vector2(22, 65), 11, Color("#b4c7ca"))
+	var objective := _make_label("Explore the moon base  /  TAB: tasks  /  ESC: free the mouse", Vector2(22, 65), 11, Color("#b4c7ca"))
 	layer.add_child(objective)
 	interaction_hint = _make_label("", Vector2.ZERO, 15, Color("#baf9f3"))
 	interaction_hint.anchor_left = 0.5
@@ -1244,7 +1284,7 @@ func _build_hud() -> void:
 	minimap.offset_bottom = 278.0
 	minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(minimap)
-	var map_label := _make_label("HABITAT MAP  /  TAB FOR TASKS", Vector2.ZERO, 10, Color("#baf9f3"))
+	var map_label := _make_label("MAP  /  TAB FOR TASKS", Vector2.ZERO, 10, Color("#baf9f3"))
 	map_label.anchor_left = 1.0
 	map_label.anchor_right = 1.0
 	map_label.offset_left = -262
@@ -1275,10 +1315,7 @@ func _update_station_hover() -> void:
 		best_distance = horizontal_distance
 		hovered_station = station_id
 	if hovered_station != "":
-		if hovered_station == "bed":
-			interaction_hint.text = "REST PERIOD  •  PRESS E TO SLEEP (8 HOURS)" if campaign_ui.get("awaiting_bed") else "CREW BUNK  •  AVAILABLE AFTER BOTH SHIFTS"
-		else:
-			interaction_hint.text = "%s  •  PRESS E TO PLAY TASK" % hovered_station.replace("_", " ").to_upper()
+		interaction_hint.text = str(campaign_ui.call("station_hint", hovered_station))
 
 
 func _collect_station_targets(parent: Node) -> void:
@@ -1332,16 +1369,20 @@ func _room_id_at_position(world_position: Vector3) -> String:
 		var room_size: Vector2 = room["size"]
 		if absf(player_position.x - center.x) <= room_size.x * 0.5 and absf(player_position.y - center.y) <= room_size.y * 0.5:
 			return str(room["id"])
-	if absf(player_position.x) > 27.5 or player_position.y > 23.0 or player_position.y < -35.0:
-		return "outside"
-	return "hallway"
+	# Rooms are checked above; hallways are the remaining walkable decks. Anything
+	# else is the open lunar surface (the old fixed box left spots next to outside
+	# machines counted as "hallway", so their E prompt never appeared).
+	for rect: Rect2 in walkable_rects:
+		if rect.has_point(player_position):
+			return "hallway"
+	return "outside"
 
 
 func _room_title(room_id: String) -> String:
 	if room_id == "outside":
 		return "OUTSIDE"
 	if room_id == "hallway":
-		return "CONNECTING HALL"
+		return "HALLWAY"
 	if rooms_by_id.has(room_id):
 		return str(rooms_by_id[room_id]["title"])
 	return "MAIN ROOM"
