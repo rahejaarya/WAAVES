@@ -1,12 +1,12 @@
 extends Control
 
 const MAP_SCALE := 2.6
-const PANEL_COLOR := Color(0.025, 0.065, 0.085, 0.94)
-const ROOM_COLOR := Color(0.10, 0.17, 0.20, 0.98)
-const ROOM_OUTLINE := Color(0.31, 0.52, 0.55, 0.95)
-const MAP_LINK := Color(0.31, 0.47, 0.49, 0.88)
-const ROOM_ACTIVE := Color(0.15, 0.34, 0.36, 1.0)
-const ROOM_ACTIVE_OUTLINE := Color("#d6ba72")
+const PANEL_COLOR := Color(0.045, 0.046, 0.075, 0.90)
+const ROOM_COLOR := Color(0.14, 0.15, 0.22, 0.98)
+const ROOM_OUTLINE := Color(0.56, 0.42, 0.48, 0.95)
+const MAP_LINK := Color(0.58, 0.48, 0.54, 0.9)
+const ROOM_ACTIVE := Color(0.35, 0.22, 0.31, 1.0)
+const ROOM_ACTIVE_OUTLINE := Color("#ffd274")
 
 const ROOMS := [
 	{"id": "garden", "label": "GARDEN", "center": Vector2(0, -28), "size": Vector2(12, 10)},
@@ -47,7 +47,7 @@ func _draw() -> void:
 	draw_style_box(plate, panel)
 	var font: Font = ThemeDB.fallback_font
 	draw_string(font, Vector2(13, 20), "HABITAT  /  DECK PLAN", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#d8e5e2"))
-	draw_string(font, Vector2(size.x - 25, 20), "N", HORIZONTAL_ALIGNMENT_CENTER, 12, 10, Color("#d6ba72"))
+	draw_string(font, Vector2(size.x - 25, 20), "N", HORIZONTAL_ALIGNMENT_CENTER, 12, 10, Color("#ffd274"))
 	draw_line(Vector2(12, 28), Vector2(size.x - 12, 28), ROOM_OUTLINE, 1.0)
 
 	var map_center := Vector2(size.x * 0.5, size.y * 0.5)

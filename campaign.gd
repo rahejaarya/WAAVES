@@ -156,42 +156,61 @@ func _build_interface() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var ui_theme := Theme.new()
 	ui_theme.default_font_size = 16
-	ui_theme.set_color("font_color", "Label", Color("#e0e9e6"))
-	ui_theme.set_color("font_color", "RichTextLabel", Color("#d6e1de"))
-	ui_theme.set_color("font_color", "Button", Color("#e8f2ef"))
+	ui_theme.set_color("font_color", "Label", Color("#fff5e4"))
+	ui_theme.set_color("font_color", "RichTextLabel", Color("#e8e2dc"))
+	ui_theme.set_color("font_color", "Button", Color("#fff5e4"))
 	ui_theme.set_color("font_hover_color", "Button", Color("#ffffff"))
-	ui_theme.set_color("font_pressed_color", "Button", Color("#baf9f3"))
+	ui_theme.set_color("font_pressed_color", "Button", Color("#ffd274"))
 	ui_theme.set_color("font_disabled_color", "Button", Color("#75858a"))
-	ui_theme.set_stylebox("normal", "Button", _panel_style(Color("#20363e"), Color("#48656c")))
-	ui_theme.set_stylebox("hover", "Button", _panel_style(Color("#29474e"), Color("#71ded3")))
-	ui_theme.set_stylebox("pressed", "Button", _panel_style(Color("#14282f"), Color("#83eee2")))
-	ui_theme.set_stylebox("focus", "Button", _panel_style(Color("#29474e"), Color("#baf9f3")))
-	ui_theme.set_stylebox("disabled", "Button", _panel_style(Color("#1a292e"), Color("#35474c")))
+	ui_theme.set_stylebox("normal", "Button", _panel_style(Color("#292b40"), Color("#66506a")))
+	ui_theme.set_stylebox("hover", "Button", _panel_style(Color("#40374d"), Color("#f0ad59")))
+	ui_theme.set_stylebox("pressed", "Button", _panel_style(Color("#27283b"), Color("#f0bd70")))
+	ui_theme.set_stylebox("focus", "Button", _panel_style(Color("#40374d"), Color("#ffd274")))
+	ui_theme.set_stylebox("disabled", "Button", _panel_style(Color("#222635"), Color("#45445a")))
 	root.theme = ui_theme
 	add_child(root)
 	var status_plate := Panel.new()
-	status_plate.position = Vector2(12, 88)
-	status_plate.size = Vector2(700, 112)
+	status_plate.anchor_top = 1.0
+	status_plate.anchor_bottom = 1.0
+	status_plate.offset_left = 24
+	status_plate.offset_top = -206
+	status_plate.offset_right = 474
+	status_plate.offset_bottom = -80
 	status_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	status_plate.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.055, 0.072, 0.86), Color("#456b70")))
+	status_plate.add_theme_stylebox_override("panel", _panel_style(Color(0.045, 0.046, 0.075, 0.80), Color("#c88255")))
 	root.add_child(status_plate)
 
 	status_label = Label.new()
-	status_label.position = Vector2(22, 96)
-	status_label.add_theme_font_size_override("font_size", 14)
-	status_label.add_theme_color_override("font_color", Color("#baf9f3"))
+	status_label.anchor_top = 1.0
+	status_label.anchor_bottom = 1.0
+	status_label.offset_left = 38
+	status_label.offset_top = -192
+	status_label.offset_right = 458
+	status_label.offset_bottom = -170
+	status_label.add_theme_font_size_override("font_size", 12)
+	status_label.add_theme_color_override("font_color", Color("#ffd274"))
 	root.add_child(status_label)
 	banner_label = Label.new()
-	banner_label.position = Vector2(22, 120)
-	banner_label.add_theme_font_size_override("font_size", 12)
-	banner_label.add_theme_color_override("font_color", Color("#d3e3e4"))
+	banner_label.anchor_top = 1.0
+	banner_label.anchor_bottom = 1.0
+	banner_label.offset_left = 38
+	banner_label.offset_top = -168
+	banner_label.offset_right = 458
+	banner_label.offset_bottom = -144
+	banner_label.add_theme_font_size_override("font_size", 11)
+	banner_label.add_theme_color_override("font_color", Color("#fff1df"))
 	root.add_child(banner_label)
 	deadline_label = Label.new()
-	deadline_label.position = Vector2(22, 148)
-	deadline_label.custom_minimum_size = Vector2(560, 48)
+	deadline_label.anchor_top = 1.0
+	deadline_label.anchor_bottom = 1.0
+	deadline_label.offset_left = 38
+	deadline_label.offset_top = -142
+	deadline_label.offset_right = 458
+	deadline_label.offset_bottom = -92
+	deadline_label.custom_minimum_size = Vector2(0, 48)
 	deadline_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	deadline_label.add_theme_font_size_override("font_size", 12)
-	deadline_label.add_theme_color_override("font_color", Color("#ffd18a"))
+	deadline_label.add_theme_color_override("font_color", Color("#e8b7a2"))
 	root.add_child(deadline_label)
 
 	board = Control.new()
@@ -211,7 +230,7 @@ func _build_interface() -> void:
 	modal.anchor_top = 0.06
 	modal.anchor_right = 0.88
 	modal.anchor_bottom = 0.94
-	modal.add_theme_stylebox_override("panel", _panel_style(Color("#16272e"), Color("#56c6c2")))
+	modal.add_theme_stylebox_override("panel", _panel_style(Color("#202137"), Color("#e4a45d")))
 	board.add_child(modal)
 	var outer := MarginContainer.new()
 	outer.add_theme_constant_override("margin_left", 22)
