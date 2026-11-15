@@ -4,7 +4,7 @@ extends CanvasLayer
 # Every time slot offers up to three choices, referred to as Day.Slot.Choice
 # (for example 1.1.3). Picking a choice on the task board pins it; the player then
 # walks to that choice's machine and presses E to carry it out. Points marked
-# "next day" are credited when the next day starts (after sleeping).
+# Points are given as soon as the task is done.
 
 const LAST_DAY := 5
 const POWER_CATEGORY := "power"
@@ -15,7 +15,6 @@ var player: CharacterBody2D
 var day := 1
 var slot := 1
 var score := 0
-var pending_score := 0
 var power_picks := 0
 var filters_inspected := false
 var filters_cleaned := false
@@ -89,7 +88,7 @@ func _process(_delta: float) -> void:
 	if not is_instance_valid(status_label) or not is_instance_valid(player):
 		return
 	status_label.text = "BEDTIME  /  DAY %d OF %d" % [day, LAST_DAY] if awaiting_bed else "DAY %d OF %d     %s" % [day, LAST_DAY, "MORNING" if slot == 1 else "AFTERNOON"]
-	score_label.text = "POINTS  %d     COMING TOMORROW  +%d" % [score, pending_score]
+	score_label.text = "POINTS  %d" % score
 	if ended:
 		banner_label.text = "GAME OVER" if final_status.begins_with("GAME OVER") else "YOU MADE IT!"
 		return
@@ -102,7 +101,7 @@ func _process(_delta: float) -> void:
 		banner_label.text = "DONE FOR TODAY  •  FIND A BED AND PRESS E TO SLEEP"
 	else:
 		var place: String = get_parent().call("_room_title", get_parent().call("_room_id_at_player"))
-		banner_label.text = "YOU ARE IN: %s   •   PRESS TAB TO PICK A TASK" % place
+		banner_label.text = "YOU ARE IN: %s" % place
 	deadline_label.text = _deadline_text()
 	var alert_color := Color("#9ce4cf")
 	if deadline_label.text.begins_with("CRITICAL"):
@@ -161,7 +160,7 @@ func station_hint(station_id: String) -> String:
 		return "%s  •  DONE FOR TODAY, GO TO BED" % here
 	if not pinned.is_empty():
 		return "%s  •  YOUR TASK IS AT %s" % [here, _station_name(str(pinned["station"]))]
-	return "%s  •  PRESS TAB TO PICK A TASK" % here
+	return here
 
 
 func interact_with_station(station_id: String) -> void:
@@ -174,11 +173,8 @@ func interact_with_station(station_id: String) -> void:
 	if awaiting_bed:
 		return
 	var pinned := get_pinned_action()
-	if pinned.is_empty():
-		outcome_label.text = "Pick a task first. Then go to its machine and press E."
-		_set_board_open(true)
-		return
-	if str(pinned["station"]) == station_id:
+	# No task picked: nothing happens (no menu pops up).
+	if not pinned.is_empty() and str(pinned["station"]) == station_id:
 		_start_action(pinned)
 
 
@@ -233,7 +229,7 @@ func _refresh_board() -> void:
 	if not is_instance_valid(modal_title):
 		return
 	modal_title.text = ("%s%s" % [_code_prefix(current_action), str(current_action.get("short", "TASK")).to_upper()]) if active else ("TASKS  /  DAY %d  /  %s" % [day, "MORNING" if slot == 1 else "AFTERNOON"])
-	resource_label.text = "POINTS  %d     COMING TOMORROW  +%d" % [score, pending_score]
+	resource_label.text = "POINTS  %d" % score
 	event_label.text = "BEDTIME  /  You're done for today! Go to a bed and press E to sleep. Tomorrow is Day %d." % (day + 1) if awaiting_bed else _event_text()
 	event_label.get_parent().visible = not active
 	resource_label.get_parent().visible = not active
@@ -856,13 +852,8 @@ func complete_action(action: Dictionary) -> void:
 	if str(action.get("category", "")) == POWER_CATEGORY:
 		power_picks += 1
 	var points := int(action["points"])
-	var when := str(action["when"])
-	choice_log.append("%sDay %d %s: %s  —  %s" % [_code_prefix(action), day, "morning" if slot == 1 else "afternoon", str(action["short"]), _points_text(points, when)])
-	if points != 0:
-		if when == "next":
-			pending_score += points
-		else:
-			score += points
+	choice_log.append("%sDay %d %s: %s  —  %s" % [_code_prefix(action), day, "morning" if slot == 1 else "afternoon", str(action["short"]), _points_text(points)])
+	score += points  # always right away
 	match action_id:
 		"inspect_filters":
 			filters_inspected = true
@@ -923,17 +914,13 @@ func _sleep() -> void:
 	day += 1
 	slot = 1
 	var wake_notes: Array[String] = []
-	if pending_score != 0:
-		wake_notes.append("You got +%d points from yesterday's work." % pending_score)
-		score += pending_score
-		pending_score = 0
 	if day == 3 and water_offered and not water_checked:
 		score -= 1
 		wake_notes.append("Nobody checked the water tanks, so you lost 1 point.")
 	if day == 4 and not filters_cleaned:
 		_game_over("The moon dust in the air filters was never cleaned. Overnight it got into the air you breathe.", "Pick 'Check the air filters' on Day 2, then 'Clean the moon dust' on Day 3.")
 		return
-	outcome_label.text = "Good morning! It's Day %d.  %s" % [day, " ".join(wake_notes)]
+	outcome_label.text = ("Good morning! It's Day %d.  %s" % [day, " ".join(wake_notes)]).strip_edges()
 	_prepare_slot()
 	_set_board_open(true)
 
@@ -1105,10 +1092,10 @@ func _code_prefix(action: Dictionary) -> String:
 	return "[%s]  " % str(action["code"])
 
 
-func _points_text(points: int, when: String) -> String:
+func _points_text(points: int) -> String:
 	if points == 0:
 		return "no points"
-	return "+%d points%s" % [points, " (the next day)" if when == "next" else ""]
+	return "+%d points" % points
 
 
 func _station_name(station_id: String) -> String:
@@ -1136,7 +1123,7 @@ func _station_name(station_id: String) -> String:
 func _event_text() -> String:
 	match day:
 		1:
-			return "DAY 1  /  Welcome to the Moon! Nothing strange is happening today. Press TAB to pick a task, then go do it."
+			return "DAY 1  /  Welcome to the Moon! Nothing strange is happening today."
 		2:
 			return "UH OH!  Moon dust is stuck in the air filters in the airlock!"
 		3:
@@ -1196,7 +1183,7 @@ func _open_link(meta: Variant) -> void:
 
 
 func _manual_text() -> String:
-	return "[color=#ffd35c]HOW TO PLAY[/color]\n\n[color=#ffd35c]Your mission[/color]\nYou live on a moon base for 5 days. Every day has a morning and an afternoon. Each time, you get to pick ONE task.\n\n[color=#ffd35c]Doing a task[/color]\n1. Press TAB and click the task you want.\n2. Walk to the machine it tells you.\n3. Press E and finish the mini-game.\n\nWhen the afternoon task is done, go to a bed and press E to sleep.\n\n[color=#ffd35c]Points[/color]\nTasks can earn you points. Some points come right away, and some come the next morning. You won't know what a task does until you do it, so choose carefully! At the end, all your points are added up.\n\n[color=#ffd35c]Staying safe[/color]\nSomething surprising happens almost every day. Read the message at the top of the task list. Some choices keep you safe, and some don't!\n\n[color=#ffd35c]Learn more from NASA[/color]\n" + _all_links_text() + "\n\nThis is a made-up story, but the science ideas come from real NASA work.\n\n[color=#ffd35c]Credits[/color]\nMoon tileset: TheRealFusion (Moonbase pack, RPG Maker MV/MZ edit)."
+	return "[color=#ffd35c]HOW TO PLAY[/color]\n\n[color=#ffd35c]Your mission[/color]\nYou live on a moon base for 5 days. Every day has a morning and an afternoon. Each time, you get to pick ONE task.\n\n[color=#ffd35c]Doing a task[/color]\n1. Press TAB and click the task you want.\n2. Walk to the machine it tells you.\n3. Press E and finish the mini-game.\n\nWhen the afternoon task is done, go to a bed and press E to sleep.\n\n[color=#ffd35c]Points[/color]\nTasks can earn you points, and you get them as soon as the task is done. You won't know what a task does until you do it, so choose carefully! At the end, all your points are added up.\n\n[color=#ffd35c]Staying safe[/color]\nSomething surprising happens almost every day. Read the message at the top of the task list. Some choices keep you safe, and some don't!\n\n[color=#ffd35c]Learn more from NASA[/color]\n" + _all_links_text() + "\n\nThis is a made-up story, but the science ideas come from real NASA work.\n\n[color=#ffd35c]Credits[/color]\nMoon tileset: TheRealFusion (Moonbase pack, RPG Maker MV/MZ edit)."
 
 
 func _final_tally() -> String:
@@ -1219,9 +1206,6 @@ func _game_over(reason: String, tip := "") -> void:
 func _win_campaign() -> void:
 	ended = true
 	active = false
-	if pending_score != 0:
-		score += pending_score
-		pending_score = 0
 	final_won = true
 	final_reason = "You stayed safe on the Moon for all 5 days. Great job!"
 	final_tip = ""
