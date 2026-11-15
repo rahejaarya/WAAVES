@@ -201,7 +201,7 @@ func _build_interface() -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column.custom_minimum_size.y = 650
+	column.custom_minimum_size.y = 0
 	mission_scroll = ScrollContainer.new()
 	mission_scroll.name = "Mission Control Scroll Area"
 	mission_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -326,7 +326,8 @@ func _rebuild_choices() -> void:
 		button.text = "%s   %s\n%s\nPIN TASK  •  GO TO %s AND PRESS E  •  %d TP%s" % [str(action["code"]), str(action["title"]), str(action["brief"]), str(action["station"]).replace("_", " ").to_upper(), int(action["tp"]), ("  •  " + reward_text if reward_text != "" else "")]
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		button.custom_minimum_size = Vector2(0, 82)
+	button.custom_minimum_size = Vector2(0, 92)
+	button.add_theme_font_size_override("font_size", 15)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.add_theme_stylebox_override("normal", _panel_style(Color("#20363e"), Color("#48656c")))
 		button.add_theme_stylebox_override("hover", _panel_style(Color("#29474e"), Color("#71ded3")))

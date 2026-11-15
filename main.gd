@@ -767,6 +767,22 @@ func _add_main_room_props() -> void:
 	_make_emissive_box("Air filter status screen", Vector3(5.7, 1.55, 2.8), Vector3(0.04, 0.58, 0.76), Color("#63d5dc"), 0.4)
 	for vent_row in range(4):
 		_make_visual_box("Air filter vent", Vector3(5.68, 0.72 + float(vent_row) * 0.19, 2.8), Vector3(0.045, 0.045, 0.82), Color("#263b43"))
+	_add_habitat_model_exhibit(Vector3(-5.5, 0.8, -4.4), 0.001, "Main room NASA habitat study model")
+
+
+func _add_habitat_model_exhibit(exhibit_position: Vector3, model_scale: float, exhibit_name: String) -> void:
+	_make_solid_box(exhibit_name + " plinth", exhibit_position - Vector3(0.0, 0.52, 0.0), Vector3(2.1, 0.32, 1.8), Color("#4c6065"))
+	_make_text_panel("NASA HABITAT\n3D reference model", exhibit_position + Vector3(0.0, -0.18, 0.92), Vector2(1.9, 0.5), 0.0)
+	for model_path: String in ["res://assets/nasa/habitat-demonstration-unit-part-1.glb", "res://assets/nasa/habitat-demonstration-unit-part-2.glb"]:
+		var model_scene := load(model_path) as PackedScene
+		if model_scene == null:
+			push_warning("NASA habitat study model failed to load: " + model_path)
+			continue
+		var model_part := model_scene.instantiate()
+		model_part.name = exhibit_name + " " + model_path.get_file().get_basename().replace("-", " ")
+		model_part.scale = Vector3.ONE * model_scale
+		model_part.position = exhibit_position
+		world_root.add_child(model_part)
 
 
 func _add_sleeping_room_props() -> void:
@@ -916,6 +932,12 @@ func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "HUD"
 	add_child(layer)
+	var top_plate := Panel.new()
+	top_plate.position = Vector2(12, 10)
+	top_plate.size = Vector2(700, 192)
+	top_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_plate.add_theme_stylebox_override("panel", _hud_style(Color(0.025, 0.065, 0.085, 0.82), Color("#56c6c2")))
+	layer.add_child(top_plate)
 
 	var title := _make_label("HABITAT ZERO", Vector2(22, 16), 19, Color("#baf9f3"))
 	layer.add_child(title)
@@ -932,7 +954,37 @@ func _build_hud() -> void:
 	interaction_hint.offset_right = 260
 	interaction_hint.offset_bottom = 36
 	interaction_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	interaction_hint.add_theme_font_size_override("font_size", 17)
+	interaction_hint.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.0))
 	layer.add_child(interaction_hint)
+	var crosshair := Control.new()
+	crosshair.name = "Aim reticle"
+	crosshair.anchor_left = 0.5
+	crosshair.anchor_right = 0.5
+	crosshair.anchor_top = 0.5
+	crosshair.anchor_bottom = 0.5
+	crosshair.offset_left = -8
+	crosshair.offset_right = 8
+	crosshair.offset_top = -8
+	crosshair.offset_bottom = 8
+	crosshair.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for reticle_rect: Rect2 in [Rect2(Vector2(7, 0), Vector2(2, 5)), Rect2(Vector2(7, 11), Vector2(2, 5)), Rect2(Vector2(0, 7), Vector2(5, 2)), Rect2(Vector2(11, 7), Vector2(5, 2))]:
+		var stroke := ColorRect.new()
+		stroke.position = reticle_rect.position
+		stroke.size = reticle_rect.size
+		stroke.color = Color("#c5faf1")
+		crosshair.add_child(stroke)
+	layer.add_child(crosshair)
+	var control_plate := Panel.new()
+	control_plate.anchor_top = 1.0
+	control_plate.anchor_bottom = 1.0
+	control_plate.offset_left = 12
+	control_plate.offset_top = -48
+	control_plate.offset_right = 475
+	control_plate.offset_bottom = -8
+	control_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	control_plate.add_theme_stylebox_override("panel", _hud_style(Color(0.025, 0.065, 0.085, 0.82), Color("#385a61")))
+	layer.add_child(control_plate)
 	var controls := _make_label("MOVE  WASD / ARROWS      JUMP  SPACE      LOOK  MOUSE", Vector2.ZERO, 11, Color("#d3e3e4"))
 	controls.anchor_top = 1.0
 	controls.anchor_bottom = 1.0
@@ -956,6 +1008,15 @@ func _build_hud() -> void:
 	minimap.offset_bottom = 278.0
 	minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(minimap)
+	var map_label := _make_label("HABITAT MAP  /  TAB FOR TASKS", Vector2.ZERO, 10, Color("#baf9f3"))
+	map_label.anchor_left = 1.0
+	map_label.anchor_right = 1.0
+	map_label.offset_left = -262
+	map_label.offset_right = -18
+	map_label.offset_top = 282
+	map_label.offset_bottom = 300
+	map_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	layer.add_child(map_label)
 
 
 func _update_station_hover() -> void:
@@ -1001,6 +1062,19 @@ func _make_label(text: String, label_position: Vector2, font_size: int, color: C
 	label.add_theme_constant_override("shadow_offset_x", 1)
 	label.add_theme_constant_override("shadow_offset_y", 1)
 	return label
+
+
+func _hud_style(fill: Color, border: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	return style
 
 
 func _room_id_at_player() -> String:
