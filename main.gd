@@ -1092,7 +1092,7 @@ func _build_hud() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "HUD"
 	add_child(layer)
-m	var top_plate := Panel.new()
+	var top_plate := Panel.new()
 	top_plate.position = Vector2(12, 10)
 	top_plate.size = Vector2(570, 112)
 	top_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
