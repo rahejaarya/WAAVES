@@ -33,6 +33,9 @@ var current_action: Dictionary = {}
 var pinned_action_id := ""
 var active := false
 var ended := false
+# Shown once per session (Play Again doesn't show it again).
+static var intro_shown := false
+
 var final_status := ""
 var final_won := false
 var final_reason := ""
@@ -80,8 +83,19 @@ func _ready() -> void:
 	manual_text.meta_clicked.connect(_open_link)
 	learn_more.meta_clicked.connect(_open_link)
 	_prepare_slot()
-	# Start in the habitat so the player sees the world immediately.
 	_set_board_open(false)
+	# The first game of a session opens on How to Play. Deferred so main.gd has
+	# handed us the player first (it gets frozen while the screen is open).
+	if not intro_shown:
+		intro_shown = true
+		_show_how_to_play.call_deferred()
+
+
+func _show_how_to_play() -> void:
+	_set_board_open(true)
+	manual_panel.visible = true
+	manual_button.text = "Back to tasks"
+	_refresh_board()
 
 
 func _process(_delta: float) -> void:
