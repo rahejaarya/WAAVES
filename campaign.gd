@@ -65,6 +65,10 @@ var outcome_label: Label
 var begin_button: Button
 var manual_button: Button
 var skip_button: Button
+var intro_overlay: Control
+var intro_card: PanelContainer
+var intro_content: VBoxContainer
+var intro_start_button: Button
 
 
 func _ready() -> void:
@@ -73,6 +77,7 @@ func _ready() -> void:
 	_prepare_slot()
 	# Start in the habitat so the player sees the 3D world immediately.
 	_set_board_open(false)
+	_show_start_briefing()
 
 
 func _process(_delta: float) -> void:
@@ -95,6 +100,11 @@ func _process(_delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and is_intro_open():
+		if event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]:
+			_dismiss_start_briefing()
+			get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_TAB:
 			toggle_board()
@@ -106,6 +116,10 @@ func _input(event: InputEvent) -> void:
 
 func is_board_open() -> bool:
 	return bool(board.visible)
+
+
+func is_intro_open() -> bool:
+	return is_instance_valid(intro_overlay) and intro_overlay.visible
 
 
 func get_pinned_task_title() -> String:
@@ -382,6 +396,181 @@ func _build_interface() -> void:
 	begin_button.pressed.connect(_restart_campaign)
 	footer.add_child(begin_button)
 	_refresh_board()
+	_build_start_briefing(root)
+
+
+func _build_start_briefing(root: Control) -> void:
+	intro_overlay = Control.new()
+	intro_overlay.name = "Opening Mission Briefing"
+	intro_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	intro_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.add_child(intro_overlay)
+	var backdrop := ColorRect.new()
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	backdrop.color = Color("#07141c")
+	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	intro_overlay.add_child(backdrop)
+	for index in range(24):
+		var star := ColorRect.new()
+		star.position = Vector2(float((index * 173) % 997) / 1000.0 * 1200.0, float((index * 283) % 701) / 720.0 * 720.0)
+		star.size = Vector2(2.0 if index % 4 == 0 else 1.0, 2.0 if index % 4 == 0 else 1.0)
+		star.color = Color(0.48, 0.88, 0.86, 0.22 if index % 4 == 0 else 0.12)
+		star.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		backdrop.add_child(star)
+	var top_glow := ColorRect.new()
+	top_glow.anchor_right = 1.0
+	top_glow.offset_bottom = 3.0
+	top_glow.color = Color("#5ce5d4")
+	top_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	intro_overlay.add_child(top_glow)
+
+	intro_card = PanelContainer.new()
+	intro_card.name = "Opening Mission Briefing Card"
+	intro_card.anchor_left = 0.10
+	intro_card.anchor_top = 0.055
+	intro_card.anchor_right = 0.90
+	intro_card.anchor_bottom = 0.945
+	intro_card.mouse_filter = Control.MOUSE_FILTER_STOP
+	intro_card.add_theme_stylebox_override("panel", _panel_style(Color("#142832"), Color("#5ce5d4")))
+	intro_overlay.add_child(intro_card)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 28)
+	margin.add_theme_constant_override("margin_right", 28)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 18)
+	intro_card.add_child(margin)
+	intro_content = VBoxContainer.new()
+	intro_content.add_theme_constant_override("separation", 10)
+	margin.add_child(intro_content)
+
+	var top_row := HBoxContainer.new()
+	intro_content.add_child(top_row)
+	var program_label := Label.new()
+	program_label.text = "WAAVES  /  LUNAR RESEARCH PROGRAM"
+	program_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	program_label.add_theme_font_size_override("font_size", 14)
+	program_label.add_theme_color_override("font_color", Color("#74e1d5"))
+	top_row.add_child(program_label)
+	var briefing_stamp := Label.new()
+	briefing_stamp.text = "CREW BRIEFING  •  01 / 05 SOLS"
+	briefing_stamp.add_theme_font_size_override("font_size", 12)
+	briefing_stamp.add_theme_color_override("font_color", Color("#f0c879"))
+	top_row.add_child(briefing_stamp)
+	var rule := ColorRect.new()
+	rule.custom_minimum_size.y = 2.0
+	rule.color = Color("#3c8c8b")
+	intro_content.add_child(rule)
+	var title := Label.new()
+	title.text = "WELCOME TO HABITAT ZERO"
+	title.add_theme_font_size_override("font_size", 30)
+	title.add_theme_color_override("font_color", Color("#f0f6f2"))
+	intro_content.add_child(title)
+	var welcome := Label.new()
+	welcome.text = "You are part of a lunar research crew. Explore the outpost, run hands-on science tasks, and keep the habitat alive through five challenging sols. Your field notes help explain what is happening on the Moon."
+	welcome.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	welcome.custom_minimum_size.y = 48
+	welcome.add_theme_font_size_override("font_size", 15)
+	welcome.add_theme_color_override("font_color", Color("#c6d8d7"))
+	intro_content.add_child(welcome)
+
+	var scroll := ScrollContainer.new()
+	scroll.name = "Briefing Details"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	intro_content.add_child(scroll)
+	var cards := GridContainer.new()
+	cards.columns = 2
+	cards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cards.add_theme_constant_override("h_separation", 12)
+	cards.add_theme_constant_override("v_separation", 12)
+	scroll.add_child(cards)
+	cards.add_child(_briefing_card("HOW TO PLAY", "Mission Control (TAB) gives you one assignment per work shift. Pin a task, walk to its labeled station, and press E to open its mini-game. Correct work earns score and research points. Optional tasks are for bonus points; you do not need to finish everything.", Color("#56c6c2")))
+	cards.add_child(_briefing_card("THE FIVE-DAY CLOCK", "Each day has two work shifts. After Shift 2, find a crew bunk and press E for an 8-hour sleep. Sleeping advances the day and brings the next event. You can skip a shift in Mission Control, but skipped assignments earn no points.", Color("#84c9ff")))
+	cards.add_child(_briefing_card("KEEP YOUR CREW ALIVE", "DAY 3  /  Clean the airlock filters before sleep.\nDAY 4  /  Reach the radiation shelter during the solar storm.\nDAY 5  /  Repair the hull leak before the moonquake.\nWarnings appear at the top left. Check them every shift.", Color("#ff9c78")))
+	cards.add_child(_briefing_card("SCIENCE FIELD NOTE", "A neutron spectrometer does not photograph underground ice. Hydrogen changes the neutrons measured above the surface, so a signal can be an indirect clue to hydrogen-bearing material. Compare readings with the background and record uncertainty.", Color("#f0c879")))
+	var footer := HBoxContainer.new()
+	footer.add_theme_constant_override("separation", 14)
+	intro_content.add_child(footer)
+	var controls := Label.new()
+	controls.text = "MOVE  WASD / ARROWS     LOOK  MOUSE     USE  E     TASKS  TAB     JUMP  SPACE"
+	controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	controls.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	controls.add_theme_font_size_override("font_size", 12)
+	controls.add_theme_color_override("font_color", Color("#a8c1c2"))
+	footer.add_child(controls)
+	intro_start_button = Button.new()
+	intro_start_button.text = "ENTER THE HABITAT  →"
+	intro_start_button.custom_minimum_size = Vector2(232, 50)
+	intro_start_button.add_theme_font_size_override("font_size", 15)
+	intro_start_button.add_theme_stylebox_override("normal", _panel_style(Color("#24665f"), Color("#73eee0")))
+	intro_start_button.add_theme_stylebox_override("hover", _panel_style(Color("#328477"), Color("#c2fff4")))
+	intro_start_button.pressed.connect(_dismiss_start_briefing)
+	footer.add_child(intro_start_button)
+	call_deferred("_animate_start_briefing")
+
+
+func _briefing_card(heading: String, copy: String, accent: Color) -> PanelContainer:
+	var card := PanelContainer.new()
+	card.custom_minimum_size = Vector2(0.0, 142.0)
+	card.add_theme_stylebox_override("panel", _panel_style(Color("#1b313a"), accent))
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	card.add_child(margin)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	margin.add_child(column)
+	var title := Label.new()
+	title.text = heading
+	title.add_theme_font_size_override("font_size", 14)
+	title.add_theme_color_override("font_color", accent)
+	column.add_child(title)
+	var body := Label.new()
+	body.text = copy
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_theme_font_size_override("font_size", 13)
+	body.add_theme_color_override("font_color", Color("#dae6e3"))
+	column.add_child(body)
+	return card
+
+
+func _animate_start_briefing() -> void:
+	await get_tree().process_frame
+	if not is_instance_valid(intro_card):
+		return
+	intro_card.pivot_offset = intro_card.size * 0.5
+	intro_card.scale = Vector2(0.96, 0.04)
+	intro_content.modulate.a = 0.0
+	intro_overlay.modulate.a = 0.0
+	var opening_tween := create_tween()
+	opening_tween.tween_property(intro_overlay, "modulate:a", 1.0, 0.24)
+	opening_tween.parallel().tween_property(intro_card, "scale", Vector2.ONE, 0.58).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	opening_tween.tween_interval(0.12)
+	opening_tween.tween_property(intro_content, "modulate:a", 1.0, 0.28)
+	var scan_tween := create_tween()
+	scan_tween.tween_property(intro_overlay.get_child(1), "modulate:a", 0.35, 0.25)
+	scan_tween.tween_property(intro_overlay.get_child(1), "modulate:a", 0.0, 0.6)
+
+
+func _show_start_briefing() -> void:
+	intro_overlay.visible = true
+	if is_instance_valid(player):
+		player.set_physics_process(false)
+		player.set("jump_buffer", 0.0)
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+func _dismiss_start_briefing() -> void:
+	if not is_intro_open():
+		return
+	intro_overlay.visible = false
+	if is_instance_valid(player):
+		player.set("jump_buffer", 0.0)
+		player.set_physics_process(not board.visible and not ended)
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if board.visible or ended else Input.MOUSE_MODE_CAPTURED
 
 
 func _refresh_board() -> void:

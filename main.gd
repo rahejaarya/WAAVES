@@ -79,7 +79,7 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_E or event.physical_keycode == KEY_E) and hovered_station != "" and not campaign_ui.call("is_board_open"):
+	if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_E or event.physical_keycode == KEY_E) and hovered_station != "" and not campaign_ui.call("is_board_open") and not campaign_ui.call("is_intro_open"):
 		campaign_ui.call("interact_with_station", hovered_station)
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		if is_instance_valid(campaign_ui) and campaign_ui.call("is_board_open"):
@@ -1217,25 +1217,6 @@ func _build_hud() -> void:
 		stroke.color = Color("#c5faf1")
 		crosshair.add_child(stroke)
 	layer.add_child(crosshair)
-	var control_plate := Panel.new()
-	control_plate.anchor_top = 1.0
-	control_plate.anchor_bottom = 1.0
-	control_plate.offset_left = 12
-	control_plate.offset_top = -48
-	control_plate.offset_right = 475
-	control_plate.offset_bottom = -8
-	control_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	control_plate.add_theme_stylebox_override("panel", _hud_style(Color(0.025, 0.065, 0.085, 0.82), Color("#385a61")))
-	layer.add_child(control_plate)
-	var controls := _make_label("MOVE  WASD / ARROWS      JUMP  SPACE      LOOK  MOUSE", Vector2.ZERO, 11, Color("#d3e3e4"))
-	controls.anchor_top = 1.0
-	controls.anchor_bottom = 1.0
-	controls.offset_left = 22.0
-	controls.offset_top = -36.0
-	controls.offset_right = 420.0
-	controls.offset_bottom = -12.0
-	layer.add_child(controls)
-
 	minimap = Control.new()
 	minimap.name = "Station Map"
 	minimap.set_script(MinimapScript)
@@ -1264,7 +1245,7 @@ func _build_hud() -> void:
 func _update_station_hover() -> void:
 	hovered_station = ""
 	interaction_hint.text = ""
-	if campaign_ui.call("is_board_open") or follow_camera == null:
+	if campaign_ui.call("is_board_open") or campaign_ui.call("is_intro_open") or follow_camera == null:
 		return
 	var current_room := _room_id_at_player()
 	var best_distance := 3.4
