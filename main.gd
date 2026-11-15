@@ -484,7 +484,76 @@ func _add_exterior_station(station_name: String, station_id: String, position: V
 	var cabinet := _make_box(world_root, station_name, position + Vector3(0.0, 0.82, 0.0), Vector3(1.15, 1.64, 0.78), Color("#62777a"))
 	cabinet.set_meta("station_id", station_id)
 	_make_visual_box(station_name + " status display", position + Vector3(0.0, 1.26, -0.405), Vector3(0.72, 0.38, 0.035), Color("#4bafb1"))
+	_add_status_panel_face(position + Vector3(0.0, 1.26, -0.43), 0.58, 0.26)
+	for side: float in [-1.0, 1.0]:
+		_make_visual_box(station_name + " armored corner rail", position + Vector3(side * 0.52, 0.82, -0.405), Vector3(0.07, 1.5, 0.07), Color("#aebbb4"))
+	match station_id:
+		"neutron_station":
+			_add_rover_detail(position)
+		"rover_station":
+			_add_battery_cart_detail(position)
+		"field_station":
+			_add_surface_sensor_detail(position)
+		"sample_station":
+			_add_sample_cache_detail(position)
+		"hull_station":
+			_add_repair_kit_detail(position)
+		"solar_station":
+			_add_solar_service_detail(position)
 	_make_text_panel(label_text, position + Vector3(0.0, 2.05, -0.02), Vector2(2.65, 0.62), 0.0)
+
+
+func _add_rover_detail(position: Vector3) -> void:
+	var rover_position := position + Vector3(-1.75, 0.0, 0.0)
+	_make_solid_box("Neutron rover chassis", rover_position + Vector3(0.0, 0.58, 0.55), Vector3(1.9, 0.5, 1.25), Color("#7a8580"))
+	for wheel_x: float in [-0.82, 0.82]:
+		for wheel_z: float in [0.12, 0.98]:
+			var wheel := _make_visual_cylinder("Rover rugged wheel", rover_position + Vector3(wheel_x, 0.28, wheel_z), 0.28, 0.18, Color("#252f32"))
+			wheel.rotation.z = PI * 0.5
+			_make_visual_torus("Rover wheel tread ring", rover_position + Vector3(wheel_x * 1.05, 0.28, wheel_z), 0.2, 0.035, Color("#64706e"))
+	_make_visual_strut("Spectrometer detector mast", rover_position + Vector3(0.0, 0.86, 0.72), rover_position + Vector3(0.0, 1.75, 0.72), 0.045, Color("#b7c1b8"))
+	_make_visual_cylinder("Neutron detector head", rover_position + Vector3(0.0, 1.82, 0.72), 0.24, 0.24, Color("#c3b276"))
+	_make_visual_box("Rover solar deck", rover_position + Vector3(0.0, 0.91, 0.55), Vector3(1.15, 0.045, 0.72), Color("#17475c"))
+
+
+func _add_battery_cart_detail(position: Vector3) -> void:
+	for wheel_x: float in [-0.48, 0.48]:
+		var wheel := _make_visual_cylinder("Battery cart wheel", position + Vector3(wheel_x, 0.14, 0.42), 0.16, 0.12, Color("#293336"))
+		wheel.rotation.z = PI * 0.5
+	for battery_x: float in [-0.25, 0.25]:
+		_make_visual_box("Rover removable battery module", position + Vector3(battery_x, 1.82, 0.42), Vector3(0.38, 0.3, 0.42), Color("#98a8a0"))
+		_make_visual_box("Battery connector cap", position + Vector3(battery_x, 2.0, 0.42), Vector3(0.14, 0.06, 0.18), Color("#d4ba6a"))
+
+
+func _add_surface_sensor_detail(position: Vector3) -> void:
+	_make_visual_strut("Surface instrument mast", position + Vector3(0.0, 1.55, 0.4), position + Vector3(0.0, 2.85, 0.4), 0.045, Color("#c2c9bc"))
+	_make_visual_cylinder("Radiation detector puck", position + Vector3(0.0, 2.88, 0.4), 0.22, 0.14, Color("#d0ba72"))
+	_make_visual_box("Thermal sensor shade", position + Vector3(0.0, 2.72, 0.4), Vector3(0.7, 0.08, 0.55), Color("#798985"))
+	for antenna_x: float in [-0.3, 0.3]:
+		_make_visual_strut("Dust sensor antenna", position + Vector3(antenna_x, 1.65, 0.42), position + Vector3(antenna_x, 2.15, 0.42), 0.025, Color("#d9c576"))
+
+
+func _add_sample_cache_detail(position: Vector3) -> void:
+	_make_visual_box("Sample cache lid", position + Vector3(0.0, 1.72, 0.4), Vector3(1.28, 0.12, 0.88), Color("#aab5aa"))
+	for latch_x: float in [-0.42, 0.42]:
+		_make_visual_box("Sample cache latch", position + Vector3(latch_x, 1.65, -0.01), Vector3(0.12, 0.22, 0.06), Color("#d8bd6e"))
+	for vial_x: float in [-0.34, 0.0, 0.34]:
+		_make_visual_cylinder("Sealed sample canister", position + Vector3(vial_x, 2.03, 0.42), 0.13, 0.34, Color("#d4d5c5"))
+		_make_visual_cylinder("Sample canister ID cap", position + Vector3(vial_x, 2.22, 0.42), 0.14, 0.06, Color("#caa85b"))
+
+
+func _add_repair_kit_detail(position: Vector3) -> void:
+	_make_visual_box("Hull repair case lid", position + Vector3(0.0, 1.7, 0.42), Vector3(1.3, 0.12, 0.92), Color("#b0b9ae"))
+	_make_visual_box("Pressure patch roll", position + Vector3(0.0, 1.95, 0.44), Vector3(0.9, 0.26, 0.66), Color("#d5c99c"))
+	for tool_x: float in [-0.38, 0.38]:
+		_make_visual_cylinder("Patch applicator handle", position + Vector3(tool_x, 1.98, 0.45), 0.07, 0.38, Color("#556a6e"))
+
+
+func _add_solar_service_detail(position: Vector3) -> void:
+	_make_visual_box("Solar array calibration screen bezel", position + Vector3(0.0, 1.68, -0.43), Vector3(0.94, 0.56, 0.08), Color("#344d54"))
+	_make_emissive_box("Solar array output readout", position + Vector3(0.0, 1.68, -0.48), Vector3(0.76, 0.38, 0.025), Color("#56bcd0"), 0.45)
+	for control_x: float in [-0.35, 0.0, 0.35]:
+		_make_visual_cylinder("Solar array tuning knob", position + Vector3(control_x, 1.23, -0.45), 0.07, 0.08, Color("#d1b66e"))
 
 
 func _add_satellite_dish() -> void:
@@ -641,26 +710,47 @@ func _add_med_bay_props() -> void:
 	_make_textured_screen("Diagnostic lunar specimen scan", Vector3(-14.2, 1.67, -18.085), Vector2(0.94, 0.62), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
 	for shelf_level in range(3):
 		_make_solid_box("Surgical supply shelf", Vector3(-22.4, 0.55 + float(shelf_level) * 0.72, -11.2), Vector3(3.7, 0.14, 0.72), Color("#71858a"))
+		_make_visual_box("Surgical shelf front rail", Vector3(-22.4, 0.68 + float(shelf_level) * 0.72, -10.82), Vector3(3.7, 0.07, 0.08), Color("#b1c0bb"))
 	for kit_index in range(3):
-		_make_solid_box("First aid kit", Vector3(-23.3 + float(kit_index) * 0.92, 1.03, -11.2), Vector3(0.66, 0.44, 0.5), Color("#d3e0dc"))
-		_make_visual_box("First aid marking", Vector3(-23.3 + float(kit_index) * 0.92, 1.26, -11.2), Vector3(0.28, 0.045, 0.08), Color("#d45e58"))
-	_make_solid_box("Life support cabinet", Vector3(-13.5, 1.15, -12.0), Vector3(2.0, 2.25, 1.4), Color("#687e82"))
+		var kit_x := -23.3 + float(kit_index) * 0.92
+		_make_solid_box("First aid kit", Vector3(kit_x, 1.03, -11.2), Vector3(0.66, 0.44, 0.5), Color("#d3e0dc"))
+		_make_visual_box("First aid kit lid", Vector3(kit_x, 1.27, -11.2), Vector3(0.68, 0.06, 0.52), Color("#e7ece4"))
+		_make_visual_box("First aid marking", Vector3(kit_x, 1.31, -11.2), Vector3(0.28, 0.045, 0.08), Color("#d45e58"))
+		_make_visual_box("First aid latch", Vector3(kit_x, 1.04, -10.93), Vector3(0.14, 0.13, 0.05), Color("#536a6c"))
+	var med_life_support := _make_solid_box("Medical oxygen and monitoring cabinet", Vector3(-13.5, 1.15, -12.0), Vector3(2.0, 2.25, 1.4), Color("#687e82"))
+	med_life_support.set_meta("equipment_type", "medical_life_support")
+	_make_visual_box("Medical cabinet service door", Vector3(-13.5, 1.12, -11.26), Vector3(1.65, 1.65, 0.06), Color("#91a19c"))
+	_add_status_panel_face(Vector3(-13.5, 1.85, -11.2), 0.86, 0.38)
+	_add_gauge(Vector3(-14.05, 0.88, -11.19), 0.18, Color("#76d3b3"))
+	_add_gauge(Vector3(-12.95, 0.88, -11.19), 0.18, Color("#d7b667"))
 	_make_visual_box("Life support status panel", Vector3(-13.5, 1.35, -11.27), Vector3(1.15, 0.58, 0.06), Color("#66d1c7"))
+	for vent_y in range(4):
+		_make_visual_box("Medical cabinet cooling louver", Vector3(-13.5, 0.48 + float(vent_y) * 0.12, -11.27), Vector3(1.1, 0.035, 0.035), Color("#354d53"))
 
 
 func _add_dining_props() -> void:
 	# One shared ward table plus a wall galley, keeping a straight route to the garden and adjacent rooms.
-	_make_solid_box("Wardroom table pedestal", Vector3(0.0, 0.48, -15.8), Vector3(0.52, 0.92, 0.52), Color("#66777b"))
+	_make_solid_box("Wardroom table pedestal", Vector3(0.0, 0.48, -15.8), Vector3(0.52, 0.92, 0.52), Color("#52666c"))
 	_make_solid_box("Wardroom table", Vector3(0.0, 0.98, -15.8), Vector3(3.3, 0.16, 1.55), Color("#c3cbc5"))
+	_make_visual_box("Wardroom table edge bumper", Vector3(0.0, 1.08, -15.8), Vector3(3.34, 0.05, 1.59), Color("#536a70"))
+	for seat_anchor: Vector2 in [Vector2(-1.25, -17.15), Vector2(1.25, -17.15), Vector2(-1.25, -14.45), Vector2(1.25, -14.45)]:
+		var seat_pad := _make_capsule_visual("Wardroom molded seat cushion", Vector3(seat_anchor.x, 0.93, seat_anchor.y), Vector3(0.43, 0.16, 0.36), Color("#738a8d"))
+		seat_pad.rotation.x = PI * 0.5
 	for seat_x: float in [-1.25, 1.25]:
-		_make_solid_box("Wardroom seat", Vector3(seat_x, 0.47, -17.15), Vector3(0.92, 0.82, 0.78), Color("#546a70"))
-		_make_solid_box("Wardroom seat", Vector3(seat_x, 0.47, -14.45), Vector3(0.92, 0.82, 0.78), Color("#546a70"))
+		_make_solid_box("Wardroom seat pedestal", Vector3(seat_x, 0.48, -17.15), Vector3(0.2, 0.9, 0.2), Color("#657b7e"))
+		_make_solid_box("Wardroom seat pedestal", Vector3(seat_x, 0.48, -14.45), Vector3(0.2, 0.9, 0.2), Color("#657b7e"))
+		_make_visual_strut("Wardroom seat back", Vector3(seat_x, 0.65, -17.15), Vector3(seat_x, 1.32, -17.48), 0.11, Color("#546a70"))
+		_make_visual_strut("Wardroom seat back", Vector3(seat_x, 0.65, -14.45), Vector3(seat_x, 1.32, -14.12), 0.11, Color("#546a70"))
 	for place_x: float in [-1.05, 1.05]:
 		_make_visual_box("Meal pouch", Vector3(place_x, 1.12, -15.8), Vector3(0.42, 0.16, 0.36), Color("#c99b64"))
 	# Two side galley runs preserve the wide central exit to the garden.
 	for counter_x: float in [-4.8, 4.8]:
 		_make_solid_box("Galley lower cabinet", Vector3(counter_x, 0.58, -20.55), Vector3(2.75, 1.1, 1.05), Color("#718084"))
 		_make_visual_box("Galley cabinet door", Vector3(counter_x, 0.58, -19.99), Vector3(2.48, 0.78, 0.05), Color("#8f9d9a"))
+		_make_visual_box("Galley cabinet kick plate", Vector3(counter_x, 0.12, -19.98), Vector3(2.52, 0.12, 0.07), Color("#42575d"))
+		for drawer_y: float in [0.38, 0.7]:
+			_make_visual_box("Galley drawer seam", Vector3(counter_x, drawer_y, -19.96), Vector3(2.3, 0.025, 0.025), Color("#50666b"))
+			_make_visual_cylinder("Galley drawer latch", Vector3(counter_x, drawer_y + 0.1, -19.91), 0.045, 0.08, Color("#d2bb77"))
 		_make_solid_box("Galley food preparation surface", Vector3(counter_x, 1.18, -20.55), Vector3(2.9, 0.16, 1.18), Color("#c4cbc4"))
 	for shelf_level in range(2):
 		for locker_x: float in [-4.8, 4.8]:
@@ -673,18 +763,28 @@ func _add_dining_props() -> void:
 func _add_restroom_props() -> void:
 	# Separate toilet and wash stations with a privacy divider and recognizable fixtures.
 	_make_solid_box("Vacuum toilet housing", Vector3(21.5, 0.5, -19.2), Vector3(1.45, 0.72, 1.65), Color("#d7dedb"))
-	_make_visual_sphere("Vacuum toilet seat", Vector3(21.5, 0.89, -19.2), 0.55, Color("#f0f1e9"))
+	_make_visual_torus("Vacuum toilet seat ring", Vector3(21.5, 0.9, -19.2), 0.51, 0.09, Color("#edf0e8"))
 	_make_visual_box("Toilet foot restraints", Vector3(21.5, 1.03, -19.82), Vector3(1.22, 0.12, 0.18), Color("#778b8e"))
 	_make_solid_box("Vacuum and waste service panel", Vector3(23.3, 1.35, -19.2), Vector3(1.3, 2.55, 1.0), Color("#71848a"))
+	_make_visual_box("Waste service access hatch", Vector3(22.62, 1.3, -19.2), Vector3(0.055, 1.1, 0.75), Color("#50666d"))
+	_add_status_panel_face(Vector3(22.58, 2.15, -19.2), 0.45, 0.3)
+	_make_visual_strut("Vacuum waste hose", Vector3(22.3, 0.58, -19.6), Vector3(22.05, 0.32, -18.95), 0.07, Color("#334e56"))
 	_make_visual_box("Toilet airflow grille", Vector3(22.62, 1.58, -19.2), Vector3(0.05, 0.8, 0.64), Color("#a9c6c2"))
 	_make_visual_box("Toilet flush control", Vector3(22.61, 2.32, -19.2), Vector3(0.06, 0.3, 0.42), Color("#6acbc4"))
 	_make_visual_box("Privacy partition", Vector3(18.0, 1.55, -16.2), Vector3(0.12, 3.0, 3.0), Color("#879997"))
 	_make_solid_box("Sponge bath wash bench", Vector3(21.5, 0.55, -12.6), Vector3(3.4, 0.42, 1.25), Color("#bbc7c2"))
 	_make_solid_box("Wash station cabinet", Vector3(21.5, 1.25, -11.2), Vector3(3.3, 2.3, 0.72), Color("#829494"))
 	_make_visual_box("Wash station mirror", Vector3(21.5, 2.25, -11.57), Vector3(2.1, 0.92, 0.04), Color("#8faeaf"))
+	_make_visual_box("Wash station mirror frame", Vector3(21.5, 2.25, -11.6), Vector3(2.22, 1.04, 0.055), Color("#536b70"))
+	_make_visual_cylinder("Wash station faucet", Vector3(21.5, 1.65, -12.0), 0.075, 0.34, Color("#b8c4bd"))
+	_make_visual_box("Wash station sink basin", Vector3(21.5, 1.48, -12.25), Vector3(1.65, 0.13, 0.66), Color("#bdc9c4"))
+	_make_visual_torus("Wash station drain ring", Vector3(21.5, 1.56, -12.25), 0.11, 0.025, Color("#53686d"))
 	_make_solid_box("Hygiene supplies locker", Vector3(14.5, 1.1, -12.0), Vector3(1.25, 2.1, 1.0), Color("#75898b"))
 	for pack in range(3):
-		_make_solid_box("Secured hygiene wipe pack", Vector3(14.5, 0.65 + float(pack) * 0.52, -11.32), Vector3(0.74, 0.34, 0.24), Color("#9dc8c2"))
+		var pack_y := 0.65 + float(pack) * 0.52
+		_make_solid_box("Secured hygiene wipe pack", Vector3(14.5, pack_y, -11.32), Vector3(0.74, 0.34, 0.24), Color("#9dc8c2"))
+		_make_visual_box("Hygiene pack tamper seal", Vector3(14.5, pack_y, -11.18), Vector3(0.56, 0.08, 0.025), Color("#e2d6a7"))
+		_make_visual_box("Hygiene locker retainer", Vector3(14.5, pack_y, -11.12), Vector3(0.08, 0.3, 0.04), Color("#52686d"))
 
 
 func _add_lab_props() -> void:
@@ -776,16 +876,27 @@ func _add_main_room_props() -> void:
 		var console_x := console_position.x
 		var console_z := console_position.y
 		_make_solid_box("Command workstation desk", Vector3(console_x, 0.72, console_z), Vector3(3.25, 0.16, 1.15), Color("#8b9997"))
+		for support_x: float in [-1.35, 1.35]:
+			_make_visual_strut("Workstation metal leg", Vector3(console_x + support_x, 0.62, console_z), Vector3(console_x + support_x, 0.12, console_z), 0.055, Color("#a5b2ad"))
+		_make_visual_box("Workstation cable tray", Vector3(console_x, 0.48, console_z), Vector3(1.6, 0.08, 0.65), Color("#43575d"))
 		_make_solid_box("Workstation pedestal", Vector3(console_x, 0.34, console_z), Vector3(0.62, 0.72, 0.82), Color("#66777b"))
 		_make_solid_box("Monitor stand", Vector3(console_x, 1.12, console_z - 0.32), Vector3(0.16, 0.72, 0.16), Color("#596d73"))
 		_make_solid_box("Monitor housing", Vector3(console_x, 1.76, console_z - 0.31), Vector3(1.72, 1.18, 0.2), Color("#3c4e54"))
+		_make_visual_box("Monitor bezel", Vector3(console_x, 1.76, console_z - 0.43), Vector3(1.56, 0.96, 0.06), Color("#778a89"))
 		_make_textured_screen("NASA reference data on workstation", Vector3(console_x, 1.76, console_z - 0.425), Vector2(1.48, 0.88), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
 		_make_visual_box("Workstation keyboard", Vector3(console_x, 0.84, console_z + 0.4), Vector3(0.92, 0.055, 0.3), Color("#394a50"))
+		for key_x in range(8):
+			for key_z in range(3):
+				_make_visual_box("Workstation keycap", Vector3(console_x - 0.38 + float(key_x) * 0.11, 0.88, console_z + 0.4 + float(key_z) * 0.075), Vector3(0.075, 0.025, 0.045), Color("#9aa7a1"))
 		_make_solid_box("Workstation compute unit", Vector3(console_x + 1.22, 1.18, console_z - 0.25), Vector3(0.42, 0.75, 0.58), Color("#596a6e"))
 		_make_visual_box("Compute unit status lights", Vector3(console_x + 1.22, 1.43, console_z - 0.554), Vector3(0.22, 0.07, 0.025), Color("#6acbc4"))
 	var life_support := _make_solid_box("Main room life support cabinet", Vector3(6.55, 1.15, 2.8), Vector3(1.65, 2.3, 1.4), Color("#6e8386"))
 	life_support.set_meta("station_id", "life_support")
 	_make_text_panel("LIFE SUPPORT\nWater / O₂ / CO₂", Vector3(6.55, 2.65, 2.0), Vector2(2.7, 0.6), 0.0)
+	_make_visual_box("Main life-support service door", Vector3(5.69, 1.24, 2.8), Vector3(0.055, 1.45, 1.08), Color("#8f9f99"))
+	_add_status_panel_face(Vector3(5.64, 1.76, 2.8), 0.72, 0.4)
+	_add_gauge(Vector3(5.62, 1.05, 2.52), 0.13, Color("#73d7bb"))
+	_add_gauge(Vector3(5.62, 1.05, 3.08), 0.13, Color("#d8bb6b"))
 	_make_emissive_box("Air filter status screen", Vector3(5.7, 1.55, 2.8), Vector3(0.04, 0.58, 0.76), Color("#63d5dc"), 0.4)
 	for vent_row in range(4):
 		_make_visual_box("Air filter vent", Vector3(5.68, 0.72 + float(vent_row) * 0.19, 2.8), Vector3(0.045, 0.045, 0.82), Color("#263b43"))
@@ -815,21 +926,32 @@ func _add_sleeping_room_props() -> void:
 			_make_visual_box("Bunk bed post", Vector3(bunk_x + post_x, 1.35, -1.1), Vector3(0.12, 2.7, 0.12), Color("#91a09e"))
 	for shelf_level in range(3):
 		_make_solid_box("Crew quarters stowage shelf", Vector3(22.0, 0.55 + float(shelf_level) * 0.68, 4.0), Vector3(3.6, 0.14, 0.72), Color("#758589"))
+		_make_visual_box("Crew shelf guard rail", Vector3(22.0, 0.74 + float(shelf_level) * 0.68, 4.34), Vector3(3.5, 0.12, 0.08), Color("#aebbb4"))
 	for storage in range(4):
-		_make_visual_box("Personal storage box", Vector3(20.7 + float(storage % 2) * 1.0, 0.9 + float(storage / 2) * 0.68, 4.0), Vector3(0.72, 0.46, 0.52), Color("#9aa8a3"))
+		var storage_x := 20.7 + float(storage % 2) * 1.0
+		var storage_y := 0.9 + float(storage / 2) * 0.68
+		_make_visual_box("Personal stowage container", Vector3(storage_x, storage_y, 4.0), Vector3(0.72, 0.46, 0.52), Color("#9aa8a3"))
+		_make_visual_box("Personal stowage lid", Vector3(storage_x, storage_y + 0.24, 4.0), Vector3(0.74, 0.055, 0.54), Color("#c0c9c1"))
+		_make_visual_box("Stowage label plate", Vector3(storage_x, storage_y, 3.72), Vector3(0.36, 0.16, 0.025), Color("#334b52"))
 
 
 func _add_airlock_props() -> void:
 	_make_visual_box("Airlock inner door frame", Vector3(0, 1.45, 9.1), Vector3(5.2, 2.9, 0.24), Color("#879497"))
 	for side: float in [-1.0, 1.0]:
-		_make_visual_box("Airlock inner sliding door", Vector3(side * 1.48, 1.35, 9.28), Vector3(1.25, 2.45, 0.18), Color("#566d75"))
+		_make_visual_box("Airlock inner parked door leaf", Vector3(side * 2.35, 1.35, 9.28), Vector3(0.48, 2.45, 0.18), Color("#566d75"))
 	_make_visual_box("Airlock outer door frame", Vector3(0, 1.45, 16.9), Vector3(5.2, 2.9, 0.24), Color("#879497"))
 	for side: float in [-1.0, 1.0]:
-		_make_visual_box("Airlock outer sliding door", Vector3(side * 1.48, 1.35, 16.72), Vector3(1.25, 2.45, 0.18), Color("#566d75"))
+		_make_visual_box("Airlock outer parked door leaf", Vector3(side * 2.35, 1.35, 16.72), Vector3(0.48, 2.45, 0.18), Color("#566d75"))
 	var filter_station := _make_solid_box("Airlock filter service panel", Vector3(3.0, 1.5, 13.0), Vector3(0.28, 2.3, 0.9), Color("#657e84"))
 	filter_station.set_meta("station_id", "airlock_filter")
 	_make_text_panel("AIRLOCK FILTERS\nInspect / clean", Vector3(3.0, 2.75, 12.45), Vector2(2.6, 0.58), 0.0)
 	_make_visual_box("Airlock control lights", Vector3(2.83, 1.85, 13.0), Vector3(0.06, 0.62, 0.48), Color("#72d7bf"))
+	_add_status_panel_face(Vector3(2.8, 1.82, 13.0), 0.55, 0.52)
+	for filter_z: float in [12.55, 13.0, 13.45]:
+		var filter := _make_visual_cylinder("Replaceable airlock filter cartridge", Vector3(2.64, 1.1, filter_z), 0.16, 0.52, Color("#b5c0b6"))
+		filter.rotation.z = PI * 0.5
+		_make_visual_cylinder("Filter cartridge locking ring", Vector3(2.64, 1.1, filter_z), 0.19, 0.08, Color("#586c71"))
+		_make_visual_box("Filter differential pressure indicator", Vector3(2.62, 1.56, filter_z), Vector3(0.05, 0.08, 0.2), Color("#d2b96f"))
 
 
 func _make_visual_cylinder(cylinder_name: String, cylinder_position: Vector3, radius: float, height: float, color: Color, parent: Node3D = null) -> MeshInstance3D:
@@ -844,6 +966,38 @@ func _make_visual_cylinder(cylinder_name: String, cylinder_position: Vector3, ra
 	instance.material_override = _material(color)
 	(parent if parent != null else world_root).add_child(instance)
 	return instance
+
+
+func _make_visual_torus(torus_name: String, torus_position: Vector3, outer_radius: float, tube_radius: float, color: Color) -> MeshInstance3D:
+	var instance := MeshInstance3D.new()
+	instance.name = torus_name
+	var mesh := TorusMesh.new()
+	mesh.inner_radius = maxf(outer_radius - tube_radius, 0.01)
+	mesh.outer_radius = outer_radius
+	mesh.rings = 32
+	mesh.ring_segments = 12
+	instance.mesh = mesh
+	instance.position = torus_position
+	instance.material_override = _material(color)
+	world_root.add_child(instance)
+	return instance
+
+
+func _add_status_panel_face(center: Vector3, width: float, height: float) -> void:
+	_make_visual_box("Instrument panel bezel", center, Vector3(width + 0.12, height + 0.12, 0.08), Color("#344c53"))
+	_make_visual_box("Instrument panel glass", center + Vector3(0.0, 0.0, 0.05), Vector3(width, height, 0.025), Color("#14292f"))
+	for indicator_x: float in [-width * 0.32, 0.0, width * 0.32]:
+		_make_emissive_box("Instrument status indicator", center + Vector3(indicator_x, height * 0.24, 0.075), Vector3(width * 0.16, 0.055, 0.02), Color("#67d4b7"), 0.38)
+	for row in range(2):
+		_make_visual_box("Instrument display data line", center + Vector3(0.0, -height * 0.08 - float(row) * 0.14, 0.075), Vector3(width * 0.72, 0.025, 0.018), Color("#6d9998"))
+
+
+func _add_gauge(center: Vector3, radius: float, needle_color: Color) -> void:
+	var face := _make_visual_cylinder("Analog system gauge", center, radius, 0.055, Color("#d3d9cf"))
+	face.rotation.x = PI * 0.5
+	var bezel := _make_visual_torus("Gauge metal bezel", center + Vector3(0.0, 0.0, 0.04), radius, 0.035, Color("#687c7e"))
+	bezel.rotation.x = PI * 0.5
+	_make_visual_strut("Gauge indicator needle", center + Vector3(0.0, 0.0, 0.065), center + Vector3(radius * 0.45, radius * 0.55, 0.065), 0.018, needle_color)
 
 
 func _make_textured_screen(screen_name: String, screen_position: Vector3, screen_size: Vector2, texture_path: String, emissive: bool) -> MeshInstance3D:

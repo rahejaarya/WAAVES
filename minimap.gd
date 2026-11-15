@@ -2,11 +2,11 @@ extends Control
 
 const MAP_SCALE := 2.6
 const PANEL_COLOR := Color(0.025, 0.065, 0.085, 0.94)
-const ROOM_COLOR := Color(0.12, 0.23, 0.28, 0.98)
-const ROOM_OUTLINE := Color(0.38, 0.75, 0.79, 0.95)
-const MAP_LINK := Color(0.34, 0.58, 0.62, 0.82)
-const ROOM_ACTIVE := Color(0.19, 0.40, 0.43, 1.0)
-const ROOM_ACTIVE_OUTLINE := Color("#fff0a6")
+const ROOM_COLOR := Color(0.10, 0.17, 0.20, 0.98)
+const ROOM_OUTLINE := Color(0.31, 0.52, 0.55, 0.95)
+const MAP_LINK := Color(0.31, 0.47, 0.49, 0.88)
+const ROOM_ACTIVE := Color(0.15, 0.34, 0.36, 1.0)
+const ROOM_ACTIVE_OUTLINE := Color("#d6ba72")
 
 const ROOMS := [
 	{"id": "garden", "label": "GARDEN", "center": Vector2(0, -28), "size": Vector2(12, 10)},
@@ -39,11 +39,16 @@ func _draw() -> void:
 		return
 
 	var panel := Rect2(Vector2.ZERO, size)
-	draw_rect(panel, PANEL_COLOR, true)
-	draw_rect(panel, ROOM_OUTLINE, false, 1.2)
+	var plate := StyleBoxFlat.new()
+	plate.bg_color = PANEL_COLOR
+	plate.border_color = ROOM_OUTLINE
+	plate.set_border_width_all(1)
+	plate.set_corner_radius_all(8)
+	draw_style_box(plate, panel)
 	var font: Font = ThemeDB.fallback_font
-	draw_string(font, Vector2(12, 21), "HABITAT MAP", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("#baf9f3"))
-	draw_line(Vector2(10, 29), Vector2(size.x - 10, 29), ROOM_OUTLINE, 1.0)
+	draw_string(font, Vector2(13, 20), "HABITAT  /  DECK PLAN", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("#d8e5e2"))
+	draw_string(font, Vector2(size.x - 25, 20), "N", HORIZONTAL_ALIGNMENT_CENTER, 12, 10, Color("#d6ba72"))
+	draw_line(Vector2(12, 28), Vector2(size.x - 12, 28), ROOM_OUTLINE, 1.0)
 
 	var map_center := Vector2(size.x * 0.5, size.y * 0.5)
 	var points: Dictionary = {}
@@ -69,7 +74,7 @@ func _draw() -> void:
 			var rect := Rect2(center - room_size * 0.5, room_size)
 			draw_rect(rect, ROOM_ACTIVE if is_current_room else ROOM_COLOR, true)
 			draw_rect(rect, ROOM_ACTIVE_OUTLINE if is_current_room else ROOM_OUTLINE, false, 2.0 if is_current_room else 1.0)
-			draw_string(font, Vector2(rect.position.x, center.y + 3), room["label"], HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 7, Color("#fff0a6") if is_current_room else Color("#e1f3f3"))
+			draw_string(font, Vector2(rect.position.x, center.y + 3), room["label"], HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, 8, Color("#fff0a6") if is_current_room else Color("#d4e0df"))
 
 	# Tiny outside markers mirror the solar panels and dish in the world.
 	var solar_left := _to_map(Vector2(-7.8, 27.0), map_center)

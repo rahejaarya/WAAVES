@@ -75,7 +75,7 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if is_instance_valid(status_label) and is_instance_valid(player):
-		status_label.text = "DAY %d  •  SHIFT %d OF 2  •  TASK TIME %d / %d  •  SCORE %d  •  RESEARCH AP %d" % [day, slot, time_points, MAX_TIME_POINTS, score, research_points]
+		status_label.text = "DAY %02d     SHIFT %d / 2     TASK TIME  %02d / %02d     SCORE  %04d     RESEARCH AP  %03d" % [day, slot, time_points, MAX_TIME_POINTS, score, research_points]
 		if not active and not ended:
 			var place: String = get_parent().call("_room_title", get_parent().call("_room_id_at_player"))
 			var pinned: String = get_pinned_task_title()
@@ -156,6 +156,8 @@ func _build_interface() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var ui_theme := Theme.new()
 	ui_theme.default_font_size = 16
+	ui_theme.set_color("font_color", "Label", Color("#e0e9e6"))
+	ui_theme.set_color("font_color", "RichTextLabel", Color("#d6e1de"))
 	ui_theme.set_color("font_color", "Button", Color("#e8f2ef"))
 	ui_theme.set_color("font_hover_color", "Button", Color("#ffffff"))
 	ui_theme.set_color("font_pressed_color", "Button", Color("#baf9f3"))
@@ -167,6 +169,12 @@ func _build_interface() -> void:
 	ui_theme.set_stylebox("disabled", "Button", _panel_style(Color("#1a292e"), Color("#35474c")))
 	root.theme = ui_theme
 	add_child(root)
+	var status_plate := Panel.new()
+	status_plate.position = Vector2(12, 88)
+	status_plate.size = Vector2(700, 112)
+	status_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	status_plate.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.055, 0.072, 0.86), Color("#456b70")))
+	root.add_child(status_plate)
 
 	status_label = Label.new()
 	status_label.position = Vector2(22, 96)
@@ -227,7 +235,7 @@ func _build_interface() -> void:
 	column.add_child(header)
 	modal_title = Label.new()
 	modal_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	modal_title.add_theme_font_size_override("font_size", 22)
+	modal_title.add_theme_font_size_override("font_size", 23)
 	modal_title.add_theme_color_override("font_color", Color("#baf9f3"))
 	header.add_child(modal_title)
 	var close_button := Button.new()
@@ -238,12 +246,22 @@ func _build_interface() -> void:
 	event_label = Label.new()
 	event_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	event_label.custom_minimum_size.y = 52
+	event_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	event_label.add_theme_color_override("font_color", Color("#e5eeee"))
-	column.add_child(event_label)
+	var event_card := PanelContainer.new()
+	event_card.name = "Mission briefing card"
+	event_card.add_theme_stylebox_override("panel", _panel_style(Color("#1c3038"), Color("#527078")))
+	event_card.add_child(event_label)
+	column.add_child(event_card)
 	resource_label = Label.new()
 	resource_label.add_theme_font_size_override("font_size", 13)
+	resource_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	resource_label.add_theme_color_override("font_color", Color("#87d7d1"))
-	column.add_child(resource_label)
+	var resource_card := PanelContainer.new()
+	resource_card.name = "Campaign resources"
+	resource_card.add_theme_stylebox_override("panel", _panel_style(Color("#14262d"), Color("#354f56")))
+	resource_card.add_child(resource_label)
+	column.add_child(resource_card)
 	outcome_label = Label.new()
 	outcome_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	outcome_label.add_theme_color_override("font_color", Color("#ffdb8f"))
@@ -272,9 +290,12 @@ func _build_interface() -> void:
 	column.add_child(challenge_panel)
 	challenge_instructions = Label.new()
 	challenge_instructions.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	challenge_instructions.add_theme_font_size_override("font_size", 17)
+	challenge_instructions.add_theme_color_override("font_color", Color("#e6efec"))
 	challenge_panel.add_child(challenge_instructions)
 	challenge_progress = Label.new()
 	challenge_progress.add_theme_color_override("font_color", Color("#87d7d1"))
+	challenge_progress.add_theme_font_size_override("font_size", 15)
 	challenge_panel.add_child(challenge_progress)
 	challenge_area = VBoxContainer.new()
 	challenge_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -336,11 +357,14 @@ func _rebuild_choices() -> void:
 			continue
 		var button := Button.new()
 		var reward_text := _reward_summary(action)
-		button.text = "%s   %s\n%s\nPIN TASK  •  GO TO %s AND PRESS E  •  %d TP%s" % [str(action["code"]), str(action["title"]), str(action["brief"]), str(action["station"]).replace("_", " ").to_upper(), int(action["tp"]), ("  •  " + reward_text if reward_text != "" else "")]
+		button.text = "%s   /   %s\n%s\n\nDESTINATION  %s     •     COST  %d TP%s" % [str(action["code"]), str(action["title"]).to_upper(), str(action["brief"]), str(action["station"]).replace("_", " ").to_upper(), int(action["tp"]), ("     •     " + reward_text if reward_text != "" else "")]
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		button.custom_minimum_size = Vector2(0, 92)
-		button.add_theme_font_size_override("font_size", 15)
+		button.custom_minimum_size = Vector2(0, 104)
+		button.add_theme_font_size_override("font_size", 14)
+		button.add_theme_color_override("font_color", Color("#edf4f1"))
+		button.add_theme_color_override("font_hover_color", Color("#ffffff"))
+		button.add_theme_color_override("font_pressed_color", Color("#baf9f3"))
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.add_theme_stylebox_override("normal", _panel_style(Color("#20363e"), Color("#48656c")))
 		button.add_theme_stylebox_override("hover", _panel_style(Color("#29474e"), Color("#71ded3")))
