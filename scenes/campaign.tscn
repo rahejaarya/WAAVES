@@ -1,0 +1,223 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/campaign.gd" id="1_qwj6c"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ppjge"]
+content_margin_left = 3.0
+content_margin_top = 2.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0.08627451, 0.15294118, 0.18039216, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.3372549, 0.7764706, 0.7607843, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nx2dq"]
+content_margin_left = 3.0
+content_margin_top = 2.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0.10980392, 0.1882353, 0.21960784, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.32156864, 0.4392157, 0.47058824, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_giq8n"]
+content_margin_left = 3.0
+content_margin_top = 2.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0.078431375, 0.14901961, 0.1764706, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.20784314, 0.30980393, 0.3372549, 1)
+
+[node name="Campaign" type="CanvasLayer" unique_id=1766454005]
+layer = 2
+script = ExtResource("1_qwj6c")
+
+[node name="Interface" type="Control" parent="." unique_id=1413900799]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="StatusPanel" type="PanelContainer" parent="Interface" unique_id=1460897804]
+layout_mode = 0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = 262.0
+offset_bottom = 5.0
+mouse_filter = 2
+
+[node name="Rows" type="VBoxContainer" parent="Interface/StatusPanel" unique_id=1986398312]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="StatusLabel" type="Label" parent="Interface/StatusPanel/Rows" unique_id=1605895009]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7294118, 0.9764706, 0.9529412, 1)
+
+[node name="ScoreLabel" type="Label" parent="Interface/StatusPanel/Rows" unique_id=801605974]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.61960787, 0.8509804, 0.8235294, 1)
+
+[node name="BannerLabel" type="Label" parent="Interface/StatusPanel/Rows" unique_id=2100371857]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(254, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.90588236, 0.6509804, 1)
+autowrap_mode = 3
+
+[node name="DeadlineLabel" type="Label" parent="Interface/StatusPanel/Rows" unique_id=1833572403]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.81960785, 0.5411765, 1)
+
+[node name="Board" type="Control" parent="Interface" unique_id=1812867416]
+unique_name_in_owner = true
+visible = false
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Shade" type="ColorRect" parent="Interface/Board" unique_id=1599333187]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.015, 0.025, 0.035, 0.85)
+
+[node name="Modal" type="PanelContainer" parent="Interface/Board" unique_id=1275381293]
+unique_name_in_owner = true
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_ppjge")
+
+[node name="MissionScroll" type="ScrollContainer" parent="Interface/Board/Modal" unique_id=1282571032]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Column" type="VBoxContainer" parent="Interface/Board/Modal/MissionScroll" unique_id=1423239965]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 3
+
+[node name="Header" type="HBoxContainer" parent="Interface/Board/Modal/MissionScroll/Column" unique_id=736632289]
+layout_mode = 2
+
+[node name="ModalTitle" type="Label" parent="Interface/Board/Modal/MissionScroll/Column/Header" unique_id=599799345]
+autowrap_mode = 3
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.827451, 0.36078432, 1)
+
+[node name="CloseButton" type="Button" parent="Interface/Board/Modal/MissionScroll/Column/Header" unique_id=815950407]
+size_flags_vertical = 0
+unique_name_in_owner = true
+layout_mode = 2
+text = "Close [Tab]"
+
+[node name="EventCard" type="PanelContainer" parent="Interface/Board/Modal/MissionScroll/Column" unique_id=1493057174]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_nx2dq")
+
+[node name="EventLabel" type="Label" parent="Interface/Board/Modal/MissionScroll/Column/EventCard" unique_id=1421560998]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8980392, 0.93333334, 0.93333334, 1)
+autowrap_mode = 3
+
+[node name="ResourceCard" type="PanelContainer" parent="Interface/Board/Modal/MissionScroll/Column" unique_id=855007425]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_giq8n")
+
+[node name="ResourceLabel" type="Label" parent="Interface/Board/Modal/MissionScroll/Column/ResourceCard" unique_id=109846565]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5294118, 0.84313726, 0.81960785, 1)
+
+[node name="OutcomeLabel" type="Label" parent="Interface/Board/Modal/MissionScroll/Column" unique_id=1172406754]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85882354, 0.56078434, 1)
+autowrap_mode = 3
+
+[node name="ChoiceList" type="VBoxContainer" parent="Interface/Board/Modal/MissionScroll/Column" unique_id=2063402447]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="ManualPanel" type="ScrollContainer" parent="Interface/Board/Modal/MissionScroll/Column" unique_id=699043531]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="ManualText" type="RichTextLabel" parent="Interface/Board/Modal/MissionScroll/Column/ManualPanel" unique_id=10903450]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
+fit_content = true
+
+[node name="ChallengePanel" type="VBoxContainer" parent="Interface/Board/Modal/MissionScroll/Column" unique_id=828972709]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="ChallengeInstructions" type="Label" parent="Interface/Board/Modal/MissionScroll/Column/ChallengePanel" unique_id=102010553]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9019608, 0.9372549, 0.9254902, 1)
+autowrap_mode = 3
+
+[node name="ChallengeProgress" type="Label" parent="Interface/Board/Modal/MissionScroll/Column/ChallengePanel" unique_id=946332711]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5294118, 0.84313726, 0.81960785, 1)
+
+[node name="ChallengeArea" type="VBoxContainer" parent="Interface/Board/Modal/MissionScroll/Column/ChallengePanel" unique_id=1848941142]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="LearnMore" type="RichTextLabel" parent="Interface/Board/Modal/MissionScroll/Column/ChallengePanel"]
+unique_name_in_owner = true
+layout_mode = 2
+bbcode_enabled = true
+fit_content = true
+
+[node name="Footer" type="HBoxContainer" parent="Interface/Board/Modal/MissionScroll/Column" unique_id=1068940669]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="ManualButton" type="Button" parent="Interface/Board/Modal/MissionScroll/Column/Footer" unique_id=1772723502]
+unique_name_in_owner = true
+layout_mode = 2
+text = "How to Play"
+
+[node name="BeginButton" type="Button" parent="Interface/Board/Modal/MissionScroll/Column/Footer" unique_id=2102778247]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Play Again"

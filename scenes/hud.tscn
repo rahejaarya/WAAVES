@@ -1,0 +1,90 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/hud.gd" id="1_oo0fn"]
+[ext_resource type="Script" path="res://scripts/minimap.gd" id="2_5ysmq"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6fi6k"]
+content_margin_left = 3.0
+content_margin_top = 2.0
+content_margin_right = 3.0
+content_margin_bottom = 1.0
+bg_color = Color(0.08, 0.07, 0.03, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.8392157, 0.7294118, 0.44705883, 1)
+
+[node name="HUD" type="CanvasLayer" unique_id=772258654]
+script = ExtResource("1_oo0fn")
+
+[node name="Screen" type="Control" parent="." unique_id=2070615425]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Alarm" type="ColorRect" parent="Screen" unique_id=412709015]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+color = Color(1, 0.15, 0.1, 0)
+
+[node name="RoomPanel" type="PanelContainer" parent="Screen" unique_id=202412711]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -45.0
+offset_top = -15.0
+offset_right = 45.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="RoomLabel" type="Label" parent="Screen/RoomPanel" unique_id=1929695176]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7294118, 0.9764706, 0.9529412, 1)
+text = "MAIN ROOM"
+horizontal_alignment = 1
+
+[node name="HintPanel" type="PanelContainer" parent="Screen" unique_id=783326024]
+unique_name_in_owner = true
+visible = false
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -150.0
+offset_top = -31.0
+offset_right = 150.0
+offset_bottom = -18.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_6fi6k")
+
+[node name="HintLabel" type="Label" parent="Screen/HintPanel" unique_id=1521721615]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.90588236, 0.6509804, 1)
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Minimap" type="Control" parent="Screen" unique_id=41473242]
+unique_name_in_owner = true
+anchors_preset = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -54.0
+offset_top = 2.0
+offset_right = -2.0
+offset_bottom = 92.0
+mouse_filter = 2
+script = ExtResource("2_5ysmq")

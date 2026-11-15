@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/machine.gd" id="1_a5lir"]
+
+[node name="Machine" type="StaticBody2D" unique_id=165724839]
+script = ExtResource("1_a5lir")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=2073837077]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=2003792688]
