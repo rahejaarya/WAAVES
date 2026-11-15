@@ -298,7 +298,7 @@ func _build_corridors() -> void:
 		_build_corridor_shell(first, second, corridor_center, corridor_size, absf(delta.x) > absf(delta.y))
 
 
-func _build_corridor_shell(first: Dictionary, second: Dictionary, center: Vector2, size: Vector2, runs_along_x: bool) -> void:
+func _build_corridor_shell(first: Dictionary, _second: Dictionary, center: Vector2, size: Vector2, runs_along_x: bool) -> void:
 	# A continuous pressure-hull tunnel connects each doorway; its side walls overlap
 	# the room bulkheads slightly so there are no gaps at either end.
 	var overlap := 0.34
@@ -480,31 +480,31 @@ func _add_exterior_task_stations() -> void:
 	_add_exterior_station("Solar array service terminal", "solar_station", Vector3(-7.8, 0.0, 30.5), "SOLAR ARRAY\nPointing / output")
 
 
-func _add_exterior_station(station_name: String, station_id: String, position: Vector3, label_text: String) -> void:
-	var cabinet := _make_box(world_root, station_name, position + Vector3(0.0, 0.82, 0.0), Vector3(1.15, 1.64, 0.78), Color("#62777a"))
+func _add_exterior_station(station_name: String, station_id: String, station_position: Vector3, label_text: String) -> void:
+	var cabinet := _make_box(world_root, station_name, station_position + Vector3(0.0, 0.82, 0.0), Vector3(1.15, 1.64, 0.78), Color("#62777a"))
 	cabinet.set_meta("station_id", station_id)
-	_make_visual_box(station_name + " status display", position + Vector3(0.0, 1.26, -0.405), Vector3(0.72, 0.38, 0.035), Color("#4bafb1"))
-	_add_status_panel_face(position + Vector3(0.0, 1.26, -0.43), 0.58, 0.26)
+	_make_visual_box(station_name + " status display", station_position + Vector3(0.0, 1.26, -0.405), Vector3(0.72, 0.38, 0.035), Color("#4bafb1"))
+	_add_status_panel_face(station_position + Vector3(0.0, 1.26, -0.43), 0.58, 0.26)
 	for side: float in [-1.0, 1.0]:
-		_make_visual_box(station_name + " armored corner rail", position + Vector3(side * 0.52, 0.82, -0.405), Vector3(0.07, 1.5, 0.07), Color("#aebbb4"))
+		_make_visual_box(station_name + " armored corner rail", station_position + Vector3(side * 0.52, 0.82, -0.405), Vector3(0.07, 1.5, 0.07), Color("#aebbb4"))
 	match station_id:
 		"neutron_station":
-			_add_rover_detail(position)
+			_add_rover_detail(station_position)
 		"rover_station":
-			_add_battery_cart_detail(position)
+			_add_battery_cart_detail(station_position)
 		"field_station":
-			_add_surface_sensor_detail(position)
+			_add_surface_sensor_detail(station_position)
 		"sample_station":
-			_add_sample_cache_detail(position)
+			_add_sample_cache_detail(station_position)
 		"hull_station":
-			_add_repair_kit_detail(position)
+			_add_repair_kit_detail(station_position)
 		"solar_station":
-			_add_solar_service_detail(position)
-	_make_text_panel(label_text, position + Vector3(0.0, 2.05, -0.02), Vector2(2.65, 0.62), 0.0)
+			_add_solar_service_detail(station_position)
+	_make_text_panel(label_text, station_position + Vector3(0.0, 2.05, -0.02), Vector2(2.65, 0.62), 0.0)
 
 
-func _add_rover_detail(position: Vector3) -> void:
-	var rover_position := position + Vector3(-1.75, 0.0, 0.0)
+func _add_rover_detail(station_position: Vector3) -> void:
+	var rover_position := station_position + Vector3(-1.75, 0.0, 0.0)
 	_make_solid_box("Neutron rover chassis", rover_position + Vector3(0.0, 0.58, 0.55), Vector3(1.9, 0.5, 1.25), Color("#7a8580"))
 	for wheel_x: float in [-0.82, 0.82]:
 		for wheel_z: float in [0.12, 0.98]:
@@ -516,44 +516,44 @@ func _add_rover_detail(position: Vector3) -> void:
 	_make_visual_box("Rover solar deck", rover_position + Vector3(0.0, 0.91, 0.55), Vector3(1.15, 0.045, 0.72), Color("#17475c"))
 
 
-func _add_battery_cart_detail(position: Vector3) -> void:
+func _add_battery_cart_detail(station_position: Vector3) -> void:
 	for wheel_x: float in [-0.48, 0.48]:
-		var wheel := _make_visual_cylinder("Battery cart wheel", position + Vector3(wheel_x, 0.14, 0.42), 0.16, 0.12, Color("#293336"))
+		var wheel := _make_visual_cylinder("Battery cart wheel", station_position + Vector3(wheel_x, 0.14, 0.42), 0.16, 0.12, Color("#293336"))
 		wheel.rotation.z = PI * 0.5
 	for battery_x: float in [-0.25, 0.25]:
-		_make_visual_box("Rover removable battery module", position + Vector3(battery_x, 1.82, 0.42), Vector3(0.38, 0.3, 0.42), Color("#98a8a0"))
-		_make_visual_box("Battery connector cap", position + Vector3(battery_x, 2.0, 0.42), Vector3(0.14, 0.06, 0.18), Color("#d4ba6a"))
+		_make_visual_box("Rover removable battery module", station_position + Vector3(battery_x, 1.82, 0.42), Vector3(0.38, 0.3, 0.42), Color("#98a8a0"))
+		_make_visual_box("Battery connector cap", station_position + Vector3(battery_x, 2.0, 0.42), Vector3(0.14, 0.06, 0.18), Color("#d4ba6a"))
 
 
-func _add_surface_sensor_detail(position: Vector3) -> void:
-	_make_visual_strut("Surface instrument mast", position + Vector3(0.0, 1.55, 0.4), position + Vector3(0.0, 2.85, 0.4), 0.045, Color("#c2c9bc"))
-	_make_visual_cylinder("Radiation detector puck", position + Vector3(0.0, 2.88, 0.4), 0.22, 0.14, Color("#d0ba72"))
-	_make_visual_box("Thermal sensor shade", position + Vector3(0.0, 2.72, 0.4), Vector3(0.7, 0.08, 0.55), Color("#798985"))
+func _add_surface_sensor_detail(station_position: Vector3) -> void:
+	_make_visual_strut("Surface instrument mast", station_position + Vector3(0.0, 1.55, 0.4), station_position + Vector3(0.0, 2.85, 0.4), 0.045, Color("#c2c9bc"))
+	_make_visual_cylinder("Radiation detector puck", station_position + Vector3(0.0, 2.88, 0.4), 0.22, 0.14, Color("#d0ba72"))
+	_make_visual_box("Thermal sensor shade", station_position + Vector3(0.0, 2.72, 0.4), Vector3(0.7, 0.08, 0.55), Color("#798985"))
 	for antenna_x: float in [-0.3, 0.3]:
-		_make_visual_strut("Dust sensor antenna", position + Vector3(antenna_x, 1.65, 0.42), position + Vector3(antenna_x, 2.15, 0.42), 0.025, Color("#d9c576"))
+		_make_visual_strut("Dust sensor antenna", station_position + Vector3(antenna_x, 1.65, 0.42), station_position + Vector3(antenna_x, 2.15, 0.42), 0.025, Color("#d9c576"))
 
 
-func _add_sample_cache_detail(position: Vector3) -> void:
-	_make_visual_box("Sample cache lid", position + Vector3(0.0, 1.72, 0.4), Vector3(1.28, 0.12, 0.88), Color("#aab5aa"))
+func _add_sample_cache_detail(station_position: Vector3) -> void:
+	_make_visual_box("Sample cache lid", station_position + Vector3(0.0, 1.72, 0.4), Vector3(1.28, 0.12, 0.88), Color("#aab5aa"))
 	for latch_x: float in [-0.42, 0.42]:
-		_make_visual_box("Sample cache latch", position + Vector3(latch_x, 1.65, -0.01), Vector3(0.12, 0.22, 0.06), Color("#d8bd6e"))
+		_make_visual_box("Sample cache latch", station_position + Vector3(latch_x, 1.65, -0.01), Vector3(0.12, 0.22, 0.06), Color("#d8bd6e"))
 	for vial_x: float in [-0.34, 0.0, 0.34]:
-		_make_visual_cylinder("Sealed sample canister", position + Vector3(vial_x, 2.03, 0.42), 0.13, 0.34, Color("#d4d5c5"))
-		_make_visual_cylinder("Sample canister ID cap", position + Vector3(vial_x, 2.22, 0.42), 0.14, 0.06, Color("#caa85b"))
+		_make_visual_cylinder("Sealed sample canister", station_position + Vector3(vial_x, 2.03, 0.42), 0.13, 0.34, Color("#d4d5c5"))
+		_make_visual_cylinder("Sample canister ID cap", station_position + Vector3(vial_x, 2.22, 0.42), 0.14, 0.06, Color("#caa85b"))
 
 
-func _add_repair_kit_detail(position: Vector3) -> void:
-	_make_visual_box("Hull repair case lid", position + Vector3(0.0, 1.7, 0.42), Vector3(1.3, 0.12, 0.92), Color("#b0b9ae"))
-	_make_visual_box("Pressure patch roll", position + Vector3(0.0, 1.95, 0.44), Vector3(0.9, 0.26, 0.66), Color("#d5c99c"))
+func _add_repair_kit_detail(station_position: Vector3) -> void:
+	_make_visual_box("Hull repair case lid", station_position + Vector3(0.0, 1.7, 0.42), Vector3(1.3, 0.12, 0.92), Color("#b0b9ae"))
+	_make_visual_box("Pressure patch roll", station_position + Vector3(0.0, 1.95, 0.44), Vector3(0.9, 0.26, 0.66), Color("#d5c99c"))
 	for tool_x: float in [-0.38, 0.38]:
-		_make_visual_cylinder("Patch applicator handle", position + Vector3(tool_x, 1.98, 0.45), 0.07, 0.38, Color("#556a6e"))
+		_make_visual_cylinder("Patch applicator handle", station_position + Vector3(tool_x, 1.98, 0.45), 0.07, 0.38, Color("#556a6e"))
 
 
-func _add_solar_service_detail(position: Vector3) -> void:
-	_make_visual_box("Solar array calibration screen bezel", position + Vector3(0.0, 1.68, -0.43), Vector3(0.94, 0.56, 0.08), Color("#344d54"))
-	_make_emissive_box("Solar array output readout", position + Vector3(0.0, 1.68, -0.48), Vector3(0.76, 0.38, 0.025), Color("#56bcd0"), 0.45)
+func _add_solar_service_detail(station_position: Vector3) -> void:
+	_make_visual_box("Solar array calibration screen bezel", station_position + Vector3(0.0, 1.68, -0.43), Vector3(0.94, 0.56, 0.08), Color("#344d54"))
+	_make_emissive_box("Solar array output readout", station_position + Vector3(0.0, 1.68, -0.48), Vector3(0.76, 0.38, 0.025), Color("#56bcd0"), 0.45)
 	for control_x: float in [-0.35, 0.0, 0.35]:
-		_make_visual_cylinder("Solar array tuning knob", position + Vector3(control_x, 1.23, -0.45), 0.07, 0.08, Color("#d1b66e"))
+		_make_visual_cylinder("Solar array tuning knob", station_position + Vector3(control_x, 1.23, -0.45), 0.07, 0.08, Color("#d1b66e"))
 
 
 func _add_satellite_dish() -> void:
@@ -819,7 +819,7 @@ func _add_lab_props() -> void:
 			push_warning("NASA habitat model for the lab display could not be loaded: " + model_path)
 	for case_index in range(4):
 		var case_x := -20.5 + float(case_index % 2) * 4.8
-		var case_z := 2.9 + float(case_index / 2) * 2.0
+		var case_z := 2.9 + float(case_index) / 2.0 * 2.0
 		var case_body := _make_solid_box("Instrument storage case", Vector3(case_x, 1.18, case_z), Vector3(1.1, 0.38, 0.75), Color("#536d73"))
 		case_body.rotation_degrees.z = 0.0
 		_make_visual_box("Instrument case lid", Vector3(case_x, 1.4, case_z), Vector3(1.12, 0.08, 0.77), Color("#819692"))
@@ -907,7 +907,7 @@ func _add_sleeping_room_props() -> void:
 	for bunk_x: float in [17.5, 22.0]:
 		for level in range(2):
 			var mattress_y := 0.48 + float(level) * 1.35
-			var bed_frame := _make_solid_box("Crew bunk bed frame", Vector3(bunk_x, mattress_y, -1.1), Vector3(3.0, 0.24, 3.7), Color("#465b62"))
+				_make_solid_box("Crew bunk bed frame", Vector3(bunk_x, mattress_y, -1.1), Vector3(3.0, 0.24, 3.7), Color("#465b62"))
 			_make_visual_box("Bunk frame inset", Vector3(bunk_x, mattress_y + 0.14, -1.1), Vector3(2.76, 0.055, 3.45), Color("#8fa09c"))
 			for rail_x: float in [-1.42, 1.42]:
 				_make_visual_box("Bunk safety rail", Vector3(bunk_x + rail_x, mattress_y + 0.34, -1.05), Vector3(0.08, 0.46, 3.28), Color("#a8b6b0"))
@@ -929,7 +929,7 @@ func _add_sleeping_room_props() -> void:
 		_make_visual_box("Crew shelf guard rail", Vector3(22.0, 0.74 + float(shelf_level) * 0.68, 4.34), Vector3(3.5, 0.12, 0.08), Color("#aebbb4"))
 	for storage in range(4):
 		var storage_x := 20.7 + float(storage % 2) * 1.0
-		var storage_y := 0.9 + float(storage / 2) * 0.68
+		var storage_y := 0.9 + float(storage) / 2.0 * 0.68
 		_make_visual_box("Personal stowage container", Vector3(storage_x, storage_y, 4.0), Vector3(0.72, 0.46, 0.52), Color("#9aa8a3"))
 		_make_visual_box("Personal stowage lid", Vector3(storage_x, storage_y + 0.24, 4.0), Vector3(0.74, 0.055, 0.54), Color("#c0c9c1"))
 		_make_visual_box("Stowage label plate", Vector3(storage_x, storage_y, 3.72), Vector3(0.36, 0.16, 0.025), Color("#334b52"))
