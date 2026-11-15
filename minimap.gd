@@ -61,6 +61,7 @@ func _draw() -> void:
 	for room: Dictionary in ROOMS:
 		var center: Vector2 = points[room["id"]]
 		var is_current_room: bool = room["id"] == current_room_id
+		#this is for when the player goes off the map 
 		if room["id"] == "outside":
 			var outside_size: Vector2 = room["size"]
 			var radius: float = outside_size.x * MAP_SCALE * 0.5
