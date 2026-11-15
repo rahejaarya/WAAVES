@@ -16,6 +16,7 @@ const WALKABLE_RECTS := [
 	Rect2(Vector2(-4.0, 9.0), Vector2(8.0, 8.0)),
 	Rect2(Vector2(-1.1, -10.55), Vector2(2.2, 5.1)),
 	Rect2(Vector2(-1.1, -23.05), Vector2(2.2, 2.1)),
+	Rect2(Vector2(-19.1, -10.55), Vector2(2.2, 5.1)),
 	Rect2(Vector2(-11.55, -17.1), Vector2(5.1, 2.2)),
 	Rect2(Vector2(6.45, -17.1), Vector2(5.1, 2.2)),
 	Rect2(Vector2(17.1, -10.55), Vector2(2.2, 5.1)),
