@@ -284,13 +284,19 @@ func _build_corridors() -> void:
 			var length := absf(delta.x) - (first_size.x + second_size.x) * 0.5 + doorway_overlap * 2.0
 			if length <= 0.05:
 				continue
-			corridor_center = Vector2((first_center.x + second_center.x) * 0.5, (first_center.y + second_center.y) * 0.5)
+			var direction_x := signf(delta.x)
+			var first_edge_x := first_center.x + direction_x * first_size.x * 0.5
+			var second_edge_x := second_center.x - direction_x * second_size.x * 0.5
+			corridor_center = Vector2((first_edge_x + second_edge_x) * 0.5, (first_center.y + second_center.y) * 0.5)
 			corridor_size = Vector2(length, DOOR_WIDTH)
 		else:
 			var length := absf(delta.y) - (first_size.y + second_size.y) * 0.5 + doorway_overlap * 2.0
 			if length <= 0.05:
 				continue
-			corridor_center = Vector2(first_center.x, (first_center.y + second_center.y) * 0.5)
+			var direction_y := signf(delta.y)
+			var first_edge_y := first_center.y + direction_y * first_size.y * 0.5
+			var second_edge_y := second_center.y - direction_y * second_size.y * 0.5
+			corridor_center = Vector2(first_center.x, (first_edge_y + second_edge_y) * 0.5)
 			corridor_size = Vector2(DOOR_WIDTH, length)
 		_make_box(
 			world_root,
