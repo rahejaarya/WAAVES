@@ -38,18 +38,20 @@ material = SubResource("StandardMaterial3D_visor")
 radius = 0.29
 height = 0.29
 
-[sub_resource type="BoxMesh" id="BoxMesh_backpack"]
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_backpack"]
 material = SubResource("StandardMaterial3D_pack")
-size = Vector3(0.68, 0.78, 0.38)
+radius = 0.3
+height = 0.95
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_arm"]
 material = SubResource("StandardMaterial3D_suit")
 radius = 0.15
 height = 0.76
 
-[sub_resource type="BoxMesh" id="BoxMesh_boot"]
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_boot"]
 material = SubResource("StandardMaterial3D_boots")
-size = Vector3(0.32, 0.26, 0.44)
+radius = 0.16
+height = 0.52
 
 [node name="Player" type="CharacterBody3D"]
 script = ExtResource("1_player_script")
@@ -75,7 +77,9 @@ mesh = SubResource("SphereMesh_visor")
 
 [node name="Backpack" type="MeshInstance3D" parent="Astronaut"]
 position = Vector3(0, 0.97, 0.47)
-mesh = SubResource("BoxMesh_backpack")
+rotation = Vector3(1.5708, 0, 0)
+scale = Vector3(1.0, 0.42, 1.0)
+mesh = SubResource("CapsuleMesh_backpack")
 
 [node name="LeftArm" type="MeshInstance3D" parent="Astronaut"]
 position = Vector3(-0.53, 0.9, 0)
@@ -89,8 +93,12 @@ mesh = SubResource("CapsuleMesh_arm")
 
 [node name="LeftBoot" type="MeshInstance3D" parent="Astronaut"]
 position = Vector3(-0.23, 0.17, 0.08)
-mesh = SubResource("BoxMesh_boot")
+rotation = Vector3(1.5708, 0, 0)
+scale = Vector3(1.0, 0.7, 1.0)
+mesh = SubResource("CapsuleMesh_boot")
 
 [node name="RightBoot" type="MeshInstance3D" parent="Astronaut"]
 position = Vector3(0.23, 0.17, 0.08)
-mesh = SubResource("BoxMesh_boot")
+rotation = Vector3(1.5708, 0, 0)
+scale = Vector3(1.0, 0.7, 1.0)
+mesh = SubResource("CapsuleMesh_boot")

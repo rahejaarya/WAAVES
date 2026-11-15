@@ -86,7 +86,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		player.rotation.y -= event.relative.x * 0.0025
-		follow_camera.rotation.x = clampf(follow_camera.rotation.x - event.relative.y * 0.0022, deg_to_rad(-78.0), deg_to_rad(78.0))
+		follow_camera.rotation.x = clampf(follow_camera.rotation.x - event.relative.y * 0.0022, deg_to_rad(-55.0), deg_to_rad(18.0))
 
 
 func _build_environment() -> void:
@@ -906,24 +906,25 @@ func _add_sleeping_room_props() -> void:
 	# Keep a clear west-side lane from the crew-quarters hatch to the main hall.
 	for bunk_x: float in [17.5, 22.0]:
 		for level in range(2):
-			var mattress_y := 0.48 + float(level) * 1.35
-			_make_solid_box("Crew bunk bed frame", Vector3(bunk_x, mattress_y, -1.1), Vector3(3.0, 0.24, 3.7), Color("#465b62"))
-			_make_visual_box("Bunk frame inset", Vector3(bunk_x, mattress_y + 0.14, -1.1), Vector3(2.76, 0.055, 3.45), Color("#8fa09c"))
-			for rail_x: float in [-1.42, 1.42]:
-				_make_visual_box("Bunk safety rail", Vector3(bunk_x + rail_x, mattress_y + 0.34, -1.05), Vector3(0.08, 0.46, 3.28), Color("#a8b6b0"))
-			for strap_z: float in [-2.12, -0.1, 1.65]:
-				_make_visual_box("Bunk restraint strap", Vector3(bunk_x, mattress_y + 0.42, strap_z), Vector3(2.64, 0.055, 0.11), Color("#d0a75d"))
+			var mattress_y := 0.44 + float(level) * 1.35
+			# Layered padded bunk: broad cushion, soft cover, and a distinct raised pillow.
+			_make_solid_box("Crew bunk bed frame", Vector3(bunk_x, mattress_y, -1.1), Vector3(2.85, 0.22, 3.45), Color("#40545d"))
+			_make_visual_box("Bunk frame trim", Vector3(bunk_x, mattress_y + 0.13, -1.1), Vector3(2.72, 0.08, 3.3), Color("#90a5a2"))
+			_make_visual_box("Crew bunk mattress", Vector3(bunk_x, mattress_y + 0.31, -1.1), Vector3(2.52, 0.28, 3.05), Color("#d7ded5"))
+			_make_visual_box("Crew bunk quilt", Vector3(bunk_x, mattress_y + 0.465, -0.55), Vector3(2.36, 0.045, 1.82), Color("#8db9b4"))
+			_make_visual_box("Crew bunk pillow", Vector3(bunk_x, mattress_y + 0.49, -2.22), Vector3(1.18, 0.18, 0.62), Color("#edf0e8"))
+			for rail_x: float in [-1.38, 1.38]:
+				_make_visual_strut("Bunk safety rail", Vector3(bunk_x + rail_x, mattress_y + 0.31, -2.55), Vector3(bunk_x + rail_x, mattress_y + 0.68, 0.42), 0.045, Color("#a8b6b0"))
+			for strap_z: float in [-1.05, 0.15]:
+				_make_visual_box("Bunk restraint strap", Vector3(bunk_x, mattress_y + 0.51, strap_z), Vector3(2.42, 0.045, 0.10), Color("#d0a75d"))
 			if level == 0:
 				var sleep_panel := _make_solid_box("Crew bunk sleep control", Vector3(bunk_x, 1.35, -3.02), Vector3(1.25, 0.8, 0.16), Color("#27444a"))
 				sleep_panel.set_meta("station_id", "bed")
 				_make_text_panel("SLEEP\nPress E to end shift", Vector3(bunk_x, 1.35, -2.92), Vector2(1.12, 0.62), 0.0)
-			var mattress := _make_capsule_visual("Pressure-restraint bunk mattress", Vector3(bunk_x, mattress_y + 0.32, -1.1), Vector3(1.35, 0.18, 1.7), Color("#d0d8d0"))
-			mattress.rotation.x = PI * 0.5
-			var pillow := _make_capsule_visual("Crew bunk head pillow", Vector3(bunk_x, mattress_y + 0.42, -2.38), Vector3(0.56, 0.12, 0.30), Color("#71b9bd"))
-			pillow.rotation.x = PI * 0.5
 			_make_emissive_box("Bunk reading light", Vector3(bunk_x, mattress_y + 0.92, -2.92), Vector3(0.62, 0.055, 0.12), Color("#d8f7dd"), 0.28)
 		for post_x: float in [-1.3, 1.3]:
-			_make_visual_box("Bunk bed post", Vector3(bunk_x + post_x, 1.35, -1.1), Vector3(0.12, 2.7, 0.12), Color("#91a09e"))
+			_make_visual_strut("Bunk bed support", Vector3(bunk_x + post_x, 0.12, -2.7), Vector3(bunk_x + post_x, 2.84, -2.7), 0.075, Color("#91a09e"))
+			_make_visual_strut("Bunk bed support", Vector3(bunk_x + post_x, 0.12, 0.5), Vector3(bunk_x + post_x, 2.84, 0.5), 0.075, Color("#91a09e"))
 	for shelf_level in range(3):
 		_make_solid_box("Crew quarters stowage shelf", Vector3(22.0, 0.55 + float(shelf_level) * 0.68, 4.0), Vector3(3.6, 0.14, 0.72), Color("#758589"))
 		_make_visual_box("Crew shelf guard rail", Vector3(22.0, 0.74 + float(shelf_level) * 0.68, 4.34), Vector3(3.5, 0.12, 0.08), Color("#aebbb4"))
@@ -1076,14 +1077,15 @@ func _make_emissive_box(box_name: String, box_position: Vector3, box_size: Vecto
 
 func _build_camera() -> void:
 	follow_camera = Camera3D.new()
-	follow_camera.name = "First Person Camera"
+	follow_camera.name = "Over Shoulder Camera"
 	follow_camera.projection = Camera3D.PROJECTION_PERSPECTIVE
-	follow_camera.fov = 78.0
+	follow_camera.fov = 72.0
 	follow_camera.near = 0.1
 	follow_camera.far = 800.0
-	follow_camera.position = Vector3(0, 1.56, 0)
+	follow_camera.position = Vector3(0.0, 2.35, 6.2)
+	follow_camera.rotation.x = deg_to_rad(-12.0)
 	player.add_child(follow_camera)
-	player.get_node("Astronaut").visible = false
+	player.get_node("Astronaut").visible = true
 	follow_camera.current = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -1103,7 +1105,7 @@ func _build_hud() -> void:
 	layer.add_child(title)
 	room_label = _make_label("AREA  /  MAIN ROOM", Vector2(22, 43), 13, Color("#ffffff"))
 	layer.add_child(room_label)
-	var objective := _make_label("Walk the habitat and lunar surface  /  TAB: mission control  /  ESC: release cursor", Vector2(22, 65), 11, Color("#b4c7ca"))
+	var objective := _make_label("Explore the habitat  /  TAB: mission control  /  ESC: release cursor", Vector2(22, 65), 11, Color("#b4c7ca"))
 	layer.add_child(objective)
 	interaction_hint = _make_label("", Vector2.ZERO, 15, Color("#baf9f3"))
 	interaction_hint.anchor_left = 0.5
