@@ -70,11 +70,13 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if is_instance_valid(status_label) and is_instance_valid(player):
-		status_label.text = "DAY %d   SLOT %d   |   TP %d/%d   |   RESEARCH AP %d   |   SCORE %d   |   NEXT DAY +%d" % [day, slot, time_points, MAX_TIME_POINTS, research_points, score, pending_score]
+		status_label.text = "DAY %d  •  SHIFT %d OF 2  •  TASK TIME %d / %d  •  SCORE %d  •  RESEARCH AP %d" % [day, slot, time_points, MAX_TIME_POINTS, score, research_points]
 		if not active and not ended:
 			var place: String = get_parent().call("_room_title", get_parent().call("_room_id_at_player"))
-			banner_label.text = "LOCATION: %s   |   TAB: MISSION CONTROL" % place
+			banner_label.text = "CURRENT AREA: %s   •   TAB: OPEN TASKS" % place
 			deadline_label.text = _deadline_text()
+		elif ended:
+			banner_label.text = "CREW STATUS: DECEASED" if final_status.begins_with("CREW DECEASED") else "CREW STATUS: SAFE"
 
 
 func _input(event: InputEvent) -> void:
@@ -124,8 +126,9 @@ func _build_interface() -> void:
 	banner_label.add_theme_color_override("font_color", Color("#d3e3e4"))
 	root.add_child(banner_label)
 	deadline_label = Label.new()
-	deadline_label.position = Vector2(22, 143)
-	deadline_label.custom_minimum_size.x = 430
+	deadline_label.position = Vector2(22, 148)
+	deadline_label.custom_minimum_size = Vector2(560, 48)
+	deadline_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	deadline_label.add_theme_font_size_override("font_size", 12)
 	deadline_label.add_theme_color_override("font_color", Color("#ffd18a"))
 	root.add_child(deadline_label)
@@ -252,7 +255,7 @@ func _refresh_board() -> void:
 		skip_button.visible = false
 		manual_button.visible = false
 		begin_button.visible = true
-		begin_button.text = "Restart campaign"
+		begin_button.text = "RESPAWN / RESTART MISSION"
 		outcome_label.text = final_status
 		return
 	begin_button.visible = false
@@ -268,12 +271,11 @@ func _rebuild_choices() -> void:
 		if completed_slot_actions.has(str(action["id"])):
 			continue
 		var button := Button.new()
-		var location_text := "HERE" if _at_location(str(action["location"])) else "GO TO " + str(action["location"]).to_upper()
 		var reward_text := _reward_summary(action)
-		button.text = "%s   %s\n%s   |   %d TP base / %d TP clean   |   %s" % [str(action["code"]), str(action["title"]), str(action["brief"]), int(action["tp"]), ceili(float(action["tp"]) * 0.5), location_text + ("   " + reward_text if reward_text != "" else "")]
+		button.text = "%s   %s\n%s\nSTART TASK  •  %d TP (clean: %d)  •  %s%s" % [str(action["code"]), str(action["title"]), str(action["brief"]), int(action["tp"]), ceili(float(action["tp"]) * 0.5), str(action["location"]).to_upper(), ("  •  " + reward_text if reward_text != "" else "")]
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		button.custom_minimum_size = Vector2(0, 71)
+		button.custom_minimum_size = Vector2(0, 82)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.add_theme_stylebox_override("normal", _panel_style(Color("#20363e"), Color("#48656c")))
 		button.add_theme_stylebox_override("hover", _panel_style(Color("#29474e"), Color("#71ded3")))
@@ -293,9 +295,6 @@ func _choose_action(index: int) -> void:
 	if ended or active or index < 0 or index >= slot_options.size():
 		return
 	var action: Dictionary = slot_options[index]
-	if not _at_location(str(action["location"])):
-		outcome_label.text = "Travel to %s, then reopen Mission Control with TAB. This action is still available." % str(action["location"])
-		return
 	var best_cost := ceili(float(action["tp"]) * 0.5)
 	if time_points < best_cost:
 		outcome_label.text = "Not enough TP to start this task. A clean run needs %d TP; daily TP resets to 50 tomorrow." % best_cost
@@ -818,7 +817,7 @@ func _reward_summary(action: Dictionary) -> String:
 func _event_text() -> String:
 	match day:
 		1:
-			return "No event. Commission the habitat carefully. TP resets to 50 each day; unused TP does not carry over."
+			return "TASK BOARD  /  Select a task to open its work screen. Complete both shifts to advance. Task time resets to 50 each day."
 		2:
 			return "EVENT: Lunar dust is trapped in the airlock filters. Locate the blocked stage today; clean it by Day 3 or the air system fails."
 		3:
@@ -853,7 +852,7 @@ func _manual_text() -> String:
 func _game_over(reason: String) -> void:
 	ended = true
 	active = false
-	final_status = "MISSION FAILED\n%s\nFinal score: %d points    Research AP: %d" % [reason, score, research_points]
+	final_status = "CREW DECEASED\n%s\nFinal score: %d points    Research AP: %d\nSelect RESPAWN to start again." % [reason, score, research_points]
 	_set_board_open(true)
 	_refresh_board()
 
