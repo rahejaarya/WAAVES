@@ -6,10 +6,6 @@ const JUMP_SPEED := 6.5
 const JUMP_BUFFER_SECONDS := 0.14
 
 @onready var astronaut: Node3D = $Astronaut
-@onready var left_leg: Node3D = $"Astronaut/Left Leg"
-@onready var right_leg: Node3D = $"Astronaut/Right Leg"
-@onready var left_arm: Node3D = $Astronaut/LeftArm
-@onready var right_arm: Node3D = $Astronaut/RightArm
 
 var jump_buffer := 0.0
 var walk_phase := 0.0
@@ -53,16 +49,7 @@ func _physics_process(delta: float) -> void:
 		var target_rotation := atan2(-local_direction.x, -local_direction.z)
 		astronaut.rotation.y = lerp_angle(astronaut.rotation.y, target_rotation, minf(delta * 10.0, 1.0))
 	if is_on_floor() and direction.length_squared() > 0.0:
-		walk_phase += delta * 9.0
-		var stride := sin(walk_phase) * 0.48
-		left_leg.rotation.x = stride
-		right_leg.rotation.x = -stride
-		left_arm.rotation.x = -stride * 0.55
-		right_arm.rotation.x = stride * 0.55
-		astronaut.position.y = absf(sin(walk_phase)) * 0.035
+		walk_phase += delta * 12.0
+		astronaut.position.y = sin(walk_phase) * 0.035
 	else:
 		astronaut.position.y = move_toward(astronaut.position.y, 0.0, delta * 0.3)
-		left_leg.rotation.x = move_toward(left_leg.rotation.x, 0.0, delta * 2.0)
-		right_leg.rotation.x = move_toward(right_leg.rotation.x, 0.0, delta * 2.0)
-		left_arm.rotation.x = move_toward(left_arm.rotation.x, 0.0, delta * 2.0)
-		right_arm.rotation.x = move_toward(right_arm.rotation.x, 0.0, delta * 2.0)

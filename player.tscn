@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://player.gd" id="1_player_script"]
 
@@ -18,15 +18,6 @@ roughness = 0.85
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_boots"]
 albedo_color = Color(0.12, 0.23, 0.30, 1)
 roughness = 0.88
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_accent"]
-albedo_color = Color(1, 0.36, 0.12, 1)
-metallic = 0.12
-roughness = 0.48
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_glove"]
-albedo_color = Color(0.18, 0.3, 0.36, 1)
-roughness = 0.7
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_astronaut"]
 radius = 0.42
@@ -62,33 +53,6 @@ material = SubResource("StandardMaterial3D_boots")
 radius = 0.16
 height = 0.52
 
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_leg"]
-material = SubResource("StandardMaterial3D_suit")
-radius = 0.18
-height = 0.76
-
-[sub_resource type="SphereMesh" id="SphereMesh_accent"]
-material = SubResource("StandardMaterial3D_accent")
-radius = 0.5
-height = 1.0
-
-[sub_resource type="SphereMesh" id="SphereMesh_glove"]
-material = SubResource("StandardMaterial3D_glove")
-radius = 0.19
-height = 0.38
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_belt"]
-material = SubResource("StandardMaterial3D_accent")
-top_radius = 0.37
-bottom_radius = 0.37
-height = 0.13
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_tank"]
-material = SubResource("StandardMaterial3D_pack")
-top_radius = 0.13
-bottom_radius = 0.16
-height = 0.72
-
 [node name="Player" type="CharacterBody3D"]
 script = ExtResource("1_player_script")
 
@@ -100,12 +64,10 @@ shape = SubResource("CapsuleShape3D_astronaut")
 
 [node name="Suit" type="MeshInstance3D" parent="Astronaut"]
 position = Vector3(0, 0.86, 0)
-scale = Vector3(0.84, 0.76, 0.84)
 mesh = SubResource("CapsuleMesh_suit")
 
 [node name="Helmet" type="MeshInstance3D" parent="Astronaut"]
 position = Vector3(0, 1.58, -0.04)
-scale = Vector3(0.92, 0.9, 0.94)
 mesh = SubResource("SphereMesh_helmet")
 
 [node name="Visor" type="MeshInstance3D" parent="Astronaut"]
@@ -119,26 +81,6 @@ rotation = Vector3(1.5708, 0, 0)
 scale = Vector3(1.0, 0.42, 1.0)
 mesh = SubResource("CapsuleMesh_backpack")
 
-[node name="Oxygen Tank Left" type="MeshInstance3D" parent="Astronaut"]
-position = Vector3(-0.2, 1.04, 0.66)
-rotation = Vector3(1.5708, 0, 0)
-mesh = SubResource("CylinderMesh_tank")
-
-[node name="Oxygen Tank Right" type="MeshInstance3D" parent="Astronaut"]
-position = Vector3(0.2, 1.04, 0.66)
-rotation = Vector3(1.5708, 0, 0)
-mesh = SubResource("CylinderMesh_tank")
-
-[node name="Left Shoulder Pad" type="MeshInstance3D" parent="Astronaut"]
-position = Vector3(-0.39, 1.22, 0)
-scale = Vector3(0.42, 0.22, 0.35)
-mesh = SubResource("SphereMesh_accent")
-
-[node name="Right Shoulder Pad" type="MeshInstance3D" parent="Astronaut"]
-position = Vector3(0.39, 1.22, 0)
-scale = Vector3(0.42, 0.22, 0.35)
-mesh = SubResource("SphereMesh_accent")
-
 [node name="LeftArm" type="MeshInstance3D" parent="Astronaut"]
 position = Vector3(-0.53, 0.9, 0)
 rotation = Vector3(0, 0, 1.5708)
@@ -148,31 +90,6 @@ mesh = SubResource("CapsuleMesh_arm")
 position = Vector3(0.53, 0.9, 0)
 rotation = Vector3(0, 0, 1.5708)
 mesh = SubResource("CapsuleMesh_arm")
-
-[node name="Chest Insignia" type="MeshInstance3D" parent="Astronaut"]
-position = Vector3(0, 1.06, -0.385)
-scale = Vector3(0.21, 0.23, 0.08)
-mesh = SubResource("SphereMesh_accent")
-
-[node name="Utility Belt" type="MeshInstance3D" parent="Astronaut"]
-position = Vector3(0, 0.47, 0)
-mesh = SubResource("CylinderMesh_belt")
-
-[node name="Left Leg" type="MeshInstance3D" parent="Astronaut"]
-position = Vector3(-0.2, 0.35, 0)
-mesh = SubResource("CapsuleMesh_leg")
-
-[node name="Right Leg" type="MeshInstance3D" parent="Astronaut"]
-position = Vector3(0.2, 0.35, 0)
-mesh = SubResource("CapsuleMesh_leg")
-
-[node name="Left Glove" type="MeshInstance3D" parent="Astronaut"]
-position = Vector3(-0.55, 0.53, 0)
-mesh = SubResource("SphereMesh_glove")
-
-[node name="Right Glove" type="MeshInstance3D" parent="Astronaut"]
-position = Vector3(0.55, 0.53, 0)
-mesh = SubResource("SphereMesh_glove")
 
 [node name="LeftBoot" type="MeshInstance3D" parent="Astronaut"]
 position = Vector3(-0.23, 0.17, 0.08)

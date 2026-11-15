@@ -9,14 +9,14 @@ const WALL_THICKNESS := 0.32
 const DOOR_WIDTH := 2.2
 
 const ROOMS := [
-	{"id": "main", "title": "MAIN ROOM", "center": Vector2(0, 0), "size": Vector2(16, 12), "doors": ["north", "east", "south", "west"], "floor": Color("#515b74")},
-	{"id": "dining", "title": "DINING ROOM", "center": Vector2(0, -16), "size": Vector2(16, 12), "doors": ["north", "east", "south", "west"], "floor": Color("#65546a")},
-	{"id": "garden", "title": "GARDEN", "center": Vector2(0, -28), "size": Vector2(12, 10), "doors": ["south"], "floor": Color("#38564e")},
-	{"id": "med", "title": "MEDICAL BAY", "center": Vector2(-18, -16), "size": Vector2(12, 12), "doors": ["east", "south"], "floor": Color("#526878")},
-	{"id": "lab", "title": "LAB", "center": Vector2(-18, 0), "size": Vector2(12, 12), "doors": ["north", "east"], "floor": Color("#514d6d")},
-	{"id": "restroom", "title": "RESTROOM", "center": Vector2(18, -16), "size": Vector2(12, 12), "doors": ["west", "south"], "floor": Color("#536f76")},
-	{"id": "sleep", "title": "CREW QUARTERS", "center": Vector2(18, 0), "size": Vector2(12, 12), "doors": ["north", "west"], "floor": Color("#655b76")},
-	{"id": "airlock", "title": "AIRLOCK", "center": Vector2(0, 13), "size": Vector2(8, 8), "doors": ["north", "south"], "floor": Color("#515e77")}
+	{"id": "main", "title": "MAIN ROOM", "center": Vector2(0, 0), "size": Vector2(16, 12), "doors": ["north", "east", "south", "west"], "floor": Color("#596462")},
+	{"id": "dining", "title": "DINING ROOM", "center": Vector2(0, -16), "size": Vector2(16, 12), "doors": ["north", "east", "south", "west"], "floor": Color("#59635f")},
+	{"id": "garden", "title": "GARDEN", "center": Vector2(0, -28), "size": Vector2(12, 10), "doors": ["south"], "floor": Color("#334739")},
+	{"id": "med", "title": "MEDICAL BAY", "center": Vector2(-18, -16), "size": Vector2(12, 12), "doors": ["east", "south"], "floor": Color("#596564")},
+	{"id": "lab", "title": "LAB", "center": Vector2(-18, 0), "size": Vector2(12, 12), "doors": ["north", "east"], "floor": Color("#575861")},
+	{"id": "restroom", "title": "RESTROOM", "center": Vector2(18, -16), "size": Vector2(12, 12), "doors": ["west", "south"], "floor": Color("#5c6260")},
+	{"id": "sleep", "title": "CREW QUARTERS", "center": Vector2(18, 0), "size": Vector2(12, 12), "doors": ["north", "west"], "floor": Color("#5b6065")},
+	{"id": "airlock", "title": "AIRLOCK", "center": Vector2(0, 13), "size": Vector2(8, 8), "doors": ["north", "south"], "floor": Color("#535c5d")}
 ]
 
 const LINKS := [
@@ -25,14 +25,13 @@ const LINKS := [
 	["restroom", "sleep"], ["main", "sleep"], ["main", "airlock"]
 ]
 
-const ROOM_WALL_COLOR := Color("#8896ad")
-const CORRIDOR_COLOR := Color("#53627b")
+const ROOM_WALL_COLOR := Color("#aab6b3")
+const CORRIDOR_COLOR := Color("#707e80")
 
 @onready var player: CharacterBody3D = $Player
 
 var world_root: Node3D
 var follow_camera: Camera3D
-var camera_mount: SpringArm3D
 var room_label: Label
 var minimap: Control
 var campaign_ui: CanvasLayer
@@ -87,48 +86,26 @@ func _unhandled_input(event: InputEvent) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		player.rotation.y -= event.relative.x * 0.0025
-		camera_mount.rotation.x = clampf(camera_mount.rotation.x + event.relative.y * 0.0022, deg_to_rad(-8.0), deg_to_rad(52.0))
+		follow_camera.rotation.x = clampf(follow_camera.rotation.x - event.relative.y * 0.0022, deg_to_rad(-55.0), deg_to_rad(18.0))
 
 
 func _build_environment() -> void:
 	var world_environment := WorldEnvironment.new()
 	var environment := Environment.new()
-	# A graphic twilight sky gives the moon base a readable, cinematic horizon.
-	var sky := Sky.new()
-	var sky_material := ProceduralSkyMaterial.new()
-	sky_material.sky_top_color = Color("#14204b")
-	sky_material.sky_horizon_color = Color("#e78991")
-	sky_material.ground_horizon_color = Color("#756078")
-	sky_material.ground_bottom_color = Color("#242844")
-	sky_material.sun_angle_max = 12.0
-	sky.sky_material = sky_material
-	environment.background_mode = Environment.BG_SKY
-	environment.sky = sky
-	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	environment.tonemap_exposure = 1.12
-	environment.glow_enabled = true
-	environment.glow_intensity = 0.42
-	environment.glow_bloom = 0.08
-	environment.ssao_enabled = true
-	environment.ssao_radius = 1.5
-	environment.ssao_intensity = 1.1
-	environment.ssao_power = 1.35
-	environment.adjustment_enabled = true
-	environment.adjustment_contrast = 1.05
-	environment.adjustment_saturation = 1.08
+	# The lunar exterior has no blue atmospheric sky; let the LRO globe define the horizon.
+	environment.background_mode = Environment.BG_COLOR
+	environment.background_color = Color("#02050a")
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("#c9d2f5")
-	environment.ambient_light_energy = 0.62
+	environment.ambient_light_color = Color("#bbc5ce")
+	environment.ambient_light_energy = 0.28
 	world_environment.environment = environment
 	add_child(world_environment)
 
 	var key_light := DirectionalLight3D.new()
 	key_light.name = "Soft Station Light"
-	key_light.rotation_degrees = Vector3(-42, -28, 0)
-	key_light.light_color = Color("#ffe0c1")
-	key_light.light_energy = 2.2
+	key_light.rotation_degrees = Vector3(-38, -32, 0)
+	key_light.light_energy = 1.8
 	key_light.shadow_enabled = true
-	key_light.directional_shadow_max_distance = 180.0
 	add_child(key_light)
 
 
@@ -192,8 +169,8 @@ func _build_room_details(room: Dictionary) -> void:
 	var area_light := OmniLight3D.new()
 	area_light.name = title + " interior light"
 	area_light.position = Vector3(center.x, 2.35, center.y)
-	area_light.light_color = Color("#c7e4ff")
-	area_light.light_energy = 1.15
+	area_light.light_color = Color("#e3f1eb")
+	area_light.light_energy = 0.7
 	area_light.omni_range = maxf(size.x, size.y) * 0.8
 	world_root.add_child(area_light)
 	# Thin floor seams break up the broad flat color into serviceable modular panels.
@@ -1083,7 +1060,8 @@ func _make_capsule_visual(capsule_name: String, capsule_position: Vector3, capsu
 func _make_emissive_box(box_name: String, box_position: Vector3, box_size: Vector3, color: Color, strength: float) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.name = box_name
-	var mesh := _rounded_box_mesh(box_size)
+	var mesh := BoxMesh.new()
+	mesh.size = box_size
 	instance.mesh = mesh
 	instance.position = box_position
 	var material := StandardMaterial3D.new()
@@ -1098,22 +1076,15 @@ func _make_emissive_box(box_name: String, box_position: Vector3, box_size: Vecto
 
 
 func _build_camera() -> void:
-	camera_mount = SpringArm3D.new()
-	camera_mount.name = "Third Person Camera Arm"
-	camera_mount.position = Vector3(0.0, 1.25, 0.0)
-	camera_mount.rotation = Vector3(deg_to_rad(10.0), PI, 0.0)
-	camera_mount.spring_length = 4.2
-	camera_mount.margin = 0.25
-	player.add_child(camera_mount)
 	follow_camera = Camera3D.new()
-	follow_camera.name = "Player Follow Camera"
+	follow_camera.name = "First Person Camera"
 	follow_camera.projection = Camera3D.PROJECTION_PERSPECTIVE
-	follow_camera.fov = 76.0
+	follow_camera.fov = 78.0
 	follow_camera.near = 0.1
 	follow_camera.far = 800.0
-	follow_camera.rotation.y = PI
-	camera_mount.add_child(follow_camera)
-	player.get_node("Astronaut").visible = true
+	follow_camera.position = Vector3(0, 1.56, 0)
+	player.add_child(follow_camera)
+	player.get_node("Astronaut").visible = false
 	follow_camera.current = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -1123,35 +1094,29 @@ func _build_hud() -> void:
 	layer.name = "HUD"
 	add_child(layer)
 	var top_plate := Panel.new()
-	top_plate.position = Vector2(24, 22)
-	top_plate.size = Vector2(288, 68)
+	top_plate.position = Vector2(12, 10)
+	top_plate.size = Vector2(570, 112)
 	top_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	top_plate.add_theme_stylebox_override("panel", _hud_style(Color(0.035, 0.045, 0.075, 0.78), Color("#f4b64d")))
+	top_plate.add_theme_stylebox_override("panel", _hud_style(Color(0.025, 0.065, 0.085, 0.82), Color("#56c6c2")))
 	layer.add_child(top_plate)
 
-	var title := _make_label("HABITAT ZERO", Vector2(42, 29), 19, Color("#fff2d5"))
+	var title := _make_label("HABITAT ZERO", Vector2(22, 16), 19, Color("#baf9f3"))
 	layer.add_child(title)
-	room_label = _make_label("MAIN DECK", Vector2(42, 57), 11, Color("#f4b64d"))
+	room_label = _make_label("AREA  /  MAIN ROOM", Vector2(22, 43), 13, Color("#ffffff"))
 	layer.add_child(room_label)
-	var objective := _make_label("TAB   MISSION CONTROL", Vector2(40, 100), 11, Color("#fff2d5"))
-	var objective_plate := Panel.new()
-	objective_plate.position = Vector2(24, 92)
-	objective_plate.size = Vector2(190, 30)
-	objective_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	objective_plate.add_theme_stylebox_override("panel", _hud_style(Color(0.035, 0.045, 0.075, 0.68), Color("#bf784e")))
-	layer.add_child(objective_plate)
+	var objective := _make_label("Explore the habitat  /  TAB: mission control  /  ESC: release cursor", Vector2(22, 65), 11, Color("#b4c7ca"))
 	layer.add_child(objective)
 	interaction_hint = _make_label("", Vector2.ZERO, 15, Color("#baf9f3"))
 	interaction_hint.anchor_left = 0.5
 	interaction_hint.anchor_right = 0.5
-	interaction_hint.anchor_top = 0.82
-	interaction_hint.anchor_bottom = 0.82
-	interaction_hint.offset_left = -300
-	interaction_hint.offset_right = 300
-	interaction_hint.offset_bottom = 42
+	interaction_hint.anchor_top = 0.72
+	interaction_hint.anchor_bottom = 0.72
+	interaction_hint.offset_left = -260
+	interaction_hint.offset_right = 260
+	interaction_hint.offset_bottom = 36
 	interaction_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	interaction_hint.add_theme_font_size_override("font_size", 18)
-	interaction_hint.add_theme_color_override("font_color", Color("#fff2d5"))
+	interaction_hint.add_theme_font_size_override("font_size", 17)
+	interaction_hint.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.0))
 	layer.add_child(interaction_hint)
 	var crosshair := Control.new()
 	crosshair.name = "Aim reticle"
@@ -1164,32 +1129,30 @@ func _build_hud() -> void:
 	crosshair.offset_top = -8
 	crosshair.offset_bottom = 8
 	crosshair.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var reticle := Panel.new()
-	reticle.position = Vector2(5, 5)
-	reticle.size = Vector2(6, 6)
-	var reticle_style := StyleBoxFlat.new()
-	reticle_style.bg_color = Color("#fff2d5")
-	reticle_style.set_corner_radius_all(3)
-	reticle.add_theme_stylebox_override("panel", reticle_style)
-	crosshair.add_child(reticle)
+	for reticle_rect: Rect2 in [Rect2(Vector2(7, 0), Vector2(2, 5)), Rect2(Vector2(7, 11), Vector2(2, 5)), Rect2(Vector2(0, 7), Vector2(5, 2)), Rect2(Vector2(11, 7), Vector2(5, 2))]:
+		var stroke := ColorRect.new()
+		stroke.position = reticle_rect.position
+		stroke.size = reticle_rect.size
+		stroke.color = Color("#c5faf1")
+		crosshair.add_child(stroke)
 	layer.add_child(crosshair)
 	var control_plate := Panel.new()
 	control_plate.anchor_top = 1.0
 	control_plate.anchor_bottom = 1.0
-	control_plate.offset_left = 24
-	control_plate.offset_top = -62
-	control_plate.offset_right = 432
-	control_plate.offset_bottom = -20
+	control_plate.offset_left = 12
+	control_plate.offset_top = -48
+	control_plate.offset_right = 475
+	control_plate.offset_bottom = -8
 	control_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	control_plate.add_theme_stylebox_override("panel", _hud_style(Color(0.035, 0.045, 0.075, 0.72), Color("#bf784e")))
+	control_plate.add_theme_stylebox_override("panel", _hud_style(Color(0.025, 0.065, 0.085, 0.82), Color("#385a61")))
 	layer.add_child(control_plate)
-	var controls := _make_label("WASD  MOVE     SPACE  JUMP     E  INTERACT     ESC  CURSOR", Vector2.ZERO, 10, Color("#fff2d5"))
+	var controls := _make_label("MOVE  WASD / ARROWS      JUMP  SPACE      LOOK  MOUSE", Vector2.ZERO, 11, Color("#d3e3e4"))
 	controls.anchor_top = 1.0
 	controls.anchor_bottom = 1.0
-	controls.offset_left = 38.0
-	controls.offset_top = -52.0
-	controls.offset_right = 416.0
-	controls.offset_bottom = -28.0
+	controls.offset_left = 22.0
+	controls.offset_top = -36.0
+	controls.offset_right = 420.0
+	controls.offset_bottom = -12.0
 	layer.add_child(controls)
 
 	minimap = Control.new()
@@ -1200,19 +1163,19 @@ func _build_hud() -> void:
 	minimap.anchor_right = 1.0
 	minimap.anchor_top = 0.0
 	minimap.anchor_bottom = 0.0
-	minimap.offset_left = -248.0
-	minimap.offset_right = -24.0
-	minimap.offset_top = 24.0
-	minimap.offset_bottom = 248.0
+	minimap.offset_left = -262.0
+	minimap.offset_right = -18.0
+	minimap.offset_top = 18.0
+	minimap.offset_bottom = 278.0
 	minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(minimap)
 	var map_label := _make_label("HABITAT MAP  /  TAB FOR TASKS", Vector2.ZERO, 10, Color("#baf9f3"))
 	map_label.anchor_left = 1.0
 	map_label.anchor_right = 1.0
-	map_label.offset_left = -248
-	map_label.offset_right = -24
-	map_label.offset_top = 252
-	map_label.offset_bottom = 270
+	map_label.offset_left = -262
+	map_label.offset_right = -18
+	map_label.offset_top = 282
+	map_label.offset_bottom = 300
 	map_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	layer.add_child(map_label)
 
@@ -1303,7 +1266,8 @@ func _make_box(parent: Node3D, box_name: String, box_position: Vector3, box_size
 	body.position = box_position
 	body.rotation.y = rotation_y
 	var mesh_instance := MeshInstance3D.new()
-	var mesh := _rounded_box_mesh(box_size)
+	var mesh := BoxMesh.new()
+	mesh.size = box_size
 	mesh_instance.mesh = mesh
 	mesh_instance.material_override = _material(color)
 	body.add_child(mesh_instance)
@@ -1319,7 +1283,8 @@ func _make_box(parent: Node3D, box_name: String, box_position: Vector3, box_size
 func _make_visual_box(box_name: String, box_position: Vector3, box_size: Vector3, color: Color) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.name = box_name
-	var mesh := _rounded_box_mesh(box_size)
+	var mesh := BoxMesh.new()
+	mesh.size = box_size
 	instance.mesh = mesh
 	instance.position = box_position
 	instance.material_override = _material(color)
@@ -1346,64 +1311,6 @@ func _material(color: Color) -> StandardMaterial3D:
 		return materials[key]
 	var new_material := StandardMaterial3D.new()
 	new_material.albedo_color = color
-	new_material.roughness = 0.66
-	new_material.metallic = 0.12
+	new_material.roughness = 0.82
 	materials[key] = new_material
 	return new_material
-
-
-func _rounded_box_mesh(box_size: Vector3) -> ArrayMesh:
-	# Subdivided, softened edges keep the habitat's modular kit from reading as
-	# sharp placeholder blocks while retaining the simple box collision shapes.
-	var half := box_size * 0.5
-	var bevel := minf(minf(box_size.x, box_size.y), box_size.z) * 0.12
-	bevel = maxf(bevel, 0.002)
-	var inner := half - Vector3.ONE * bevel
-	var face_basis := [
-		[Vector3.RIGHT, Vector3(0, 0, -1), Vector3.UP],
-		[Vector3.LEFT, Vector3(0, 0, 1), Vector3.UP],
-		[Vector3.UP, Vector3.RIGHT, Vector3(0, 0, -1)],
-		[Vector3.DOWN, Vector3.RIGHT, Vector3(0, 0, 1)],
-		[Vector3.BACK, Vector3.RIGHT, Vector3.UP],
-		[Vector3.FORWARD, Vector3.LEFT, Vector3.UP]
-	]
-	var divisions := 4
-	var surface := SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for basis: Array in face_basis:
-		var normal: Vector3 = basis[0]
-		var axis_u: Vector3 = basis[1]
-		var axis_v: Vector3 = basis[2]
-		for v in range(divisions):
-			for u in range(divisions):
-				var u0 := -1.0 + 2.0 * float(u) / divisions
-				var u1 := -1.0 + 2.0 * float(u + 1) / divisions
-				var v0 := -1.0 + 2.0 * float(v) / divisions
-				var v1 := -1.0 + 2.0 * float(v + 1) / divisions
-				var p00 := normal * _axis_half(half, normal) + axis_u * (_axis_half(half, axis_u) * u0) + axis_v * (_axis_half(half, axis_v) * v0)
-				var p10 := normal * _axis_half(half, normal) + axis_u * (_axis_half(half, axis_u) * u1) + axis_v * (_axis_half(half, axis_v) * v0)
-				var p11 := normal * _axis_half(half, normal) + axis_u * (_axis_half(half, axis_u) * u1) + axis_v * (_axis_half(half, axis_v) * v1)
-				var p01 := normal * _axis_half(half, normal) + axis_u * (_axis_half(half, axis_u) * u0) + axis_v * (_axis_half(half, axis_v) * v1)
-				_add_soft_box_vertex(surface, p00, inner, bevel)
-				_add_soft_box_vertex(surface, p10, inner, bevel)
-				_add_soft_box_vertex(surface, p11, inner, bevel)
-				_add_soft_box_vertex(surface, p00, inner, bevel)
-				_add_soft_box_vertex(surface, p11, inner, bevel)
-				_add_soft_box_vertex(surface, p01, inner, bevel)
-	return surface.commit()
-
-
-func _axis_half(half: Vector3, axis: Vector3) -> float:
-	if absf(axis.x) > 0.5:
-		return half.x
-	if absf(axis.y) > 0.5:
-		return half.y
-	return half.z
-
-
-func _add_soft_box_vertex(surface: SurfaceTool, raw_position: Vector3, inner: Vector3, bevel: float) -> void:
-	var core := raw_position.clamp(-inner, inner)
-	var offset := raw_position - core
-	var normal := offset.normalized()
-	surface.set_normal(normal)
-	surface.add_vertex(core + normal * bevel)
