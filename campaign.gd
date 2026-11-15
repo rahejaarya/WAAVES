@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const MAX_TIME_POINTS := 50
+const SLEEP_HOURS := 8
 
 var player: CharacterBody3D
 var day := 1
@@ -44,6 +45,7 @@ var selected_sequence: Array[int] = []
 var random_source := RandomNumberGenerator.new()
 
 var status_label: Label
+var score_label: Label
 var banner_label: Label
 var deadline_label: Label
 var event_label: Label
@@ -75,12 +77,19 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if is_instance_valid(status_label) and is_instance_valid(player):
-		status_label.text = "DAY %02d     SHIFT %d / 2     TASK TIME  %02d / %02d     SCORE  %04d     RESEARCH AP  %03d" % [day, slot, time_points, MAX_TIME_POINTS, score, research_points]
+		status_label.text = "REST PERIOD  /  DAY %d OF 5" % day if awaiting_bed else "DAY %02d OF 5     WORK SHIFT %d OF 2     TIME  %02d / %02d TP" % [day, slot, time_points, MAX_TIME_POINTS]
+		score_label.text = "SCORE  %04d     RESEARCH AP  %03d" % [score, research_points]
 		if not active and not ended:
 			var place: String = get_parent().call("_room_title", get_parent().call("_room_id_at_player"))
 			var pinned: String = get_pinned_task_title()
 			banner_label.text = ("TASK PINNED: %s  •  FIND THE STATION AND PRESS E" % pinned) if pinned != "" else "CURRENT AREA: %s   •   TAB: OPEN TASKS" % place
-			deadline_label.text = _deadline_text()
+			deadline_label.text = "SLEEP WINDOW  /  8 HOURS  /  REPORT TO A BUNK AND PRESS E" if awaiting_bed else _deadline_text()
+			var alert_color := Color("#9ce4cf")
+			if deadline_label.text.begins_with("CRITICAL"):
+				alert_color = Color("#ff817a")
+			elif deadline_label.text.begins_with("WARNING"):
+				alert_color = Color("#ffd18a")
+			deadline_label.add_theme_color_override("font_color", alert_color)
 		elif ended:
 			banner_label.text = "CREW STATUS: DECEASED" if final_status.begins_with("CREW DECEASED") else "CREW STATUS: SAFE"
 
@@ -117,16 +126,66 @@ func interact_with_station(station_id: String) -> void:
 		return
 	if station_id == "bed":
 		if not awaiting_bed:
-			outcome_label.text = "The shift is still active. Finish Slot 2 before sleeping to end the day."
+			outcome_label.text = "Work time is still active. Complete or skip the current shift; your rest period starts after Shift 2."
+			_set_board_open(true)
+			_refresh_board()
 			return
 		_advance_to_next_day()
 		return
+	# A pinned mission takes priority at its assigned station. If another active
+	# mission is at this station, let the player start it without making them
+	# return to the task board first.
+	if pinned_action_id != "":
+		for index in range(slot_options.size()):
+			if str(slot_options[index].get("station", "")) == station_id and str(slot_options[index]["id"]) == pinned_action_id:
+				pinned_action_id = ""
+				_start_action(index)
+				return
 	for index in range(slot_options.size()):
-		if str(slot_options[index].get("station", "")) == station_id and (pinned_action_id == "" or str(slot_options[index]["id"]) == pinned_action_id):
+		if str(slot_options[index].get("station", "")) == station_id:
 			pinned_action_id = ""
 			_start_action(index)
 			return
-	outcome_label.text = "No active task for this station in the current shift. Open Mission Control with TAB to review tasks."
+	_start_bonus_task(station_id)
+
+
+func _start_bonus_task(station_id: String) -> void:
+	var tasks := {
+		"garden": ["Hydroponics care", "inspect", "Check the grow lights, nutrient flow, and seedling indicators."],
+		"medical": ["Medical scan", "bandage", "Complete the suit-up medical wrap in the marked order."],
+		"lab_console": ["Signal calibration", "pattern", "Repeat the instrument's recorded color sequence."],
+		"seismometer": ["Seismometer tune-up", "dial", "Tune the calibration dial to the displayed reference."],
+		"life_support": ["Life support flow check", "valves", "Verify water, oxygen, and CO₂ lines in order."],
+		"airlock_filter": ["Airlock filter clean", "brush", "Clear the highlighted dust deposits from the filter."],
+		"neutron_station": ["Neutron reading", "scan", "Select the three stable spectrometer readings."],
+		"rover_station": ["Rover battery check", "inspect", "Inspect the three battery and connector indicators."],
+		"field_station": ["Surface sensor calibration", "dial", "Set the surface instrument to its reference value."],
+		"sample_station": ["Sample collection", "sample", "Select the three marked mineral-bearing areas."],
+		"hull_station": ["Hull patch practice", "wrench", "Turn the repair tool through four quarter-turns."],
+		"solar_station": ["Solar array output check", "math", "Solve the array output calibration check."],
+		"eva_station": ["EVA equipment check", "inspect", "Verify the three suit and tether indicators."]
+	}
+	if not tasks.has(station_id):
+		outcome_label.text = "There is no playable station here. Move closer to habitat equipment and press E."
+		return
+	var task: Array = tasks[station_id]
+	current_action = {
+		"id": "bonus_%s" % station_id,
+		"code": "BONUS",
+		"title": str(task[0]),
+		"brief": "A quick station practice task.",
+		"tp": 0,
+		"points": 10,
+		"when": "now",
+		"game": str(task[1]),
+		"location": "bonus",
+		"challenge": str(task[2]),
+		"category": "bonus",
+		"result": "Practice task complete.",
+		"station": station_id,
+		"bonus_task": true
+	}
+	_start_action_data(current_action)
 
 
 func _set_board_open(open: bool) -> void:
@@ -170,25 +229,30 @@ func _build_interface() -> void:
 	root.theme = ui_theme
 	add_child(root)
 	var status_plate := Panel.new()
-	status_plate.position = Vector2(12, 88)
-	status_plate.size = Vector2(700, 112)
+	status_plate.position = Vector2(12, 108)
+	status_plate.size = Vector2(700, 116)
 	status_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	status_plate.add_theme_stylebox_override("panel", _panel_style(Color(0.025, 0.055, 0.072, 0.86), Color("#456b70")))
 	root.add_child(status_plate)
 
 	status_label = Label.new()
-	status_label.position = Vector2(22, 96)
+	status_label.position = Vector2(22, 116)
 	status_label.add_theme_font_size_override("font_size", 14)
 	status_label.add_theme_color_override("font_color", Color("#baf9f3"))
 	root.add_child(status_label)
+	score_label = Label.new()
+	score_label.position = Vector2(22, 138)
+	score_label.add_theme_font_size_override("font_size", 12)
+	score_label.add_theme_color_override("font_color", Color("#9ed9d2"))
+	root.add_child(score_label)
 	banner_label = Label.new()
-	banner_label.position = Vector2(22, 120)
+	banner_label.position = Vector2(22, 158)
 	banner_label.add_theme_font_size_override("font_size", 12)
 	banner_label.add_theme_color_override("font_color", Color("#d3e3e4"))
 	root.add_child(banner_label)
 	deadline_label = Label.new()
-	deadline_label.position = Vector2(22, 148)
-	deadline_label.custom_minimum_size = Vector2(560, 48)
+	deadline_label.position = Vector2(22, 180)
+	deadline_label.custom_minimum_size = Vector2(660, 38)
 	deadline_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	deadline_label.add_theme_font_size_override("font_size", 12)
 	deadline_label.add_theme_color_override("font_color", Color("#ffd18a"))
@@ -309,7 +373,7 @@ func _build_interface() -> void:
 	manual_button.pressed.connect(_toggle_manual)
 	footer.add_child(manual_button)
 	skip_button = Button.new()
-	skip_button.text = "Skip this slot (no points)"
+	skip_button.text = "Skip this shift (no points)"
 	skip_button.pressed.connect(_skip_slot)
 	footer.add_child(skip_button)
 	begin_button = Button.new()
@@ -323,16 +387,18 @@ func _build_interface() -> void:
 func _refresh_board() -> void:
 	if not is_instance_valid(modal_title):
 		return
-	modal_title.text = ("TASK INTERFACE  /  DAY %d  /  SLOT %d" if active else "MISSION CONTROL  /  DAY %d  /  SLOT %d") % [day, slot]
+	modal_title.text = ("%s  /  DAY %d  /  SLOT %d" % [str(current_action.get("title", "STATION TASK")).to_upper(), day, slot]) if active else ("MISSION CONTROL  /  DAY %d  /  SLOT %d" % [day, slot])
 	resource_label.text = "TIME POINTS  %d / %d     RESEARCH AP  %d     SCORE  %d     PENDING NEXT DAY  +%d" % [time_points, MAX_TIME_POINTS, research_points, score, pending_score]
-	event_label.text = "SHIFT COMPLETE  /  Go to Crew Quarters. Look at a bed and press E to sleep and begin the next day." if awaiting_bed else _event_text()
+	event_label.text = "REST PERIOD  /  Sleep for 8 hours at a crew bunk to begin the next day." if awaiting_bed else _event_text()
 	event_label.visible = not active
 	resource_label.visible = not active
 	choice_list.visible = not manual_panel.visible and not active
 	outcome_label.visible = not active
 	challenge_panel.visible = active
-	skip_button.visible = not manual_panel.visible and not active and not ended
+	skip_button.visible = not manual_panel.visible and not active and not ended and not awaiting_bed
 	manual_button.visible = not active and not ended
+	if awaiting_bed:
+		choice_list.visible = false
 	if ended:
 		choice_list.visible = false
 		manual_panel.visible = false
@@ -386,12 +452,15 @@ func _choose_action(index: int) -> void:
 	var action: Dictionary = slot_options[index]
 	pinned_action_id = str(action["id"])
 	var station := str(action.get("station", ""))
-	outcome_label.text = "TASK PINNED  /  Go to the %s station, aim at its equipment, and press E to begin." % station.replace("_", " ").to_upper()
+	outcome_label.text = "TASK PINNED  /  Walk up to the %s station and press E to begin." % station.replace("_", " ").to_upper()
 	_set_board_open(false)
 
 
 func _start_action(index: int) -> void:
-	var action: Dictionary = slot_options[index]
+	_start_action_data(slot_options[index])
+
+
+func _start_action_data(action: Dictionary) -> void:
 	var best_cost := ceili(float(action["tp"]) * 0.5)
 	if time_points < best_cost:
 		outcome_label.text = "Not enough TP to start this task. A clean run needs %d TP; daily TP resets to 50 tomorrow." % best_cost
@@ -579,6 +648,14 @@ func _turn_tool(button: Button) -> void:
 
 
 func _finish_minigame() -> void:
+	if bool(current_action.get("bonus_task", false)):
+		var bonus_points := int(current_action.get("points", 10))
+		score += bonus_points
+		outcome_label.text = "STATION TASK COMPLETE  /  +%d POINTS" % bonus_points
+		active = false
+		current_action.clear()
+		_refresh_board()
+		return
 	var base_cost := int(current_action["tp"])
 	var actual_cost := ceili(float(base_cost) * 0.5) if mistakes == 0 else base_cost
 	if time_points < actual_cost:
@@ -713,7 +790,8 @@ func _advance_to_next_day() -> void:
 	if not awaiting_bed:
 		awaiting_bed = true
 		slot_options.clear()
-		outcome_label.text = "All tasks for today are resolved. Report to Crew Quarters, aim at a bed, and press E to sleep."
+		pinned_action_id = ""
+		outcome_label.text = "Work shifts complete. This is your 8-hour rest period. Find any crew bunk and press E to sleep through the night."
 		_set_board_open(true)
 		_refresh_board()
 		return
@@ -992,7 +1070,7 @@ func _reward_summary(action: Dictionary) -> String:
 func _event_text() -> String:
 	match day:
 		1:
-			return "TASK BOARD  /  Select a task to open its work screen. Complete both shifts to advance. Task time resets to 50 each day."
+			return "ASSIGNMENTS  /  One mission per shift. Bonus station drills earn points. Sleep 8 hours after Shift 2."
 		2:
 			return "EVENT: Lunar dust is trapped in the airlock filters. Locate the blocked stage today; clean it by Day 3 or the air system fails."
 		3:
@@ -1004,24 +1082,25 @@ func _event_text() -> String:
 
 
 func _deadline_text() -> String:
-	var deadlines: Array[String] = []
-	if day <= 3 and not filters_cleaned:
-		deadlines.append("FILTER DUST: clean by Day 3")
-	if day <= 3 and not water_checked:
-		deadlines.append("WATER CHECK: optional, −1 point if missed")
-	if day >= 3 and day <= 5 and not leak_fixed:
-		deadlines.append("HULL LEAK: patch before Day 5 Slot 2")
+	if day == 3 and not filters_cleaned:
+		return "CRITICAL  /  Air filters fail tonight unless cleaned before sleep."
+	if day == 2 and not filters_cleaned:
+		return "WARNING  /  Clear airlock dust by end of Day 3 to protect habitat air."
 	if day == 4 and not flare_shelter_reached:
-		deadlines.append("SOLAR PARTICLES: shelter this slot")
+		return "CRITICAL  /  Solar storm imminent. Reach the shielded core this shift or the crew will die."
+	if day == 5 and not leak_fixed:
+		return "CRITICAL  /  Hull pressure is falling. Repair the leak before the moonquake."
+	if day >= 3 and not leak_found and not leak_fixed:
+		return "WARNING  /  Leak not located. Find and repair it before the Day 5 moonquake."
 	if garden_failure_pending:
-		deadlines.append("CROP FAILURE: inspect Garden today")
-	if deadlines.is_empty():
-		return "SURVIVAL SYSTEMS NOMINAL  /  Current shift ends after Slot 2"
-	return "DEADLINES  /  " + "   •   ".join(deadlines)
+		return "WARNING  /  Crop rack is failing. Inspect and replant in the Garden today."
+	if day == 2 and not water_checked:
+		return "OPTIONAL  /  Check water storage to avoid a 1 point penalty tomorrow."
+	return "SURVIVAL SYSTEMS NOMINAL  /  Two work shifts, then 8 hours of sleep."
 
 
 func _manual_text() -> String:
-	return "[b]FIELD MANUAL — HABITAT OPERATIONS[/b]\n\n[b]How a shift works[/b]\nEach day has two slots and 50 Time Points (TP). A clean minigame run costs half the listed TP; rework costs the full amount. TP resets to 50 each day and never accumulates. Complete a choice where the task is physically located. Close Mission Control with TAB, walk there, then reopen it.\n\n[b]Scoring and research[/b]\nPoints marked “next day” are credited when the next day starts. Research Actions add Research AP (separate from score). Field samples must be collected outside and analyzed in the Lab. Failed minigames can be retried, but mistakes use more TP.\n\n[b]Survival deadlines[/b]\n• Day 2: Inspect the airlock filter stages. Clean the dust by Day 3 or the habitat air system fails.\n• Day 2: Check water storage to avoid the −1 Day 3 score penalty.\n• Day 3: Use ultrasonic leak detection or correlate the pressure drop with the seismometer impact record.\n• Day 4 Slot 1: Repair the leak if located, then enter the shielded core. You may do both in this slot. Power-intensive work during the solar-particle warning is fatal.\n• Day 5 Slot 1: The pressure boundary must be repaired before the moonquake.\n• Garden: Each unchecked day increases crop-failure risk. A failed crop causes mission loss unless the rack is checked and replanted in time.\n\n[b]Research notes[/b]\nNeutron spectroscopy measures neutron populations. Hydrogen moderates neutrons, so a reduced epithermal-neutron signal can indicate hydrogen-bearing material; it does not directly image or prove an ice deposit. Record the rover transect, background and uncertainty.\n\nLife support tasks are separated: water recovery purifies and checks water; oxygen generation electrolyzes water; air revitalization removes CO₂ and trace contaminants. Never treat a single “oxygen recycling” reading as proof that all loops work.\n\nLunar rock and regolith tasks are screening studies. Log sample IDs and sites, keep samples sealed, and record mineral observations without claiming a deposit is economically valuable. The Moon has no Earth-like weather; the surface station records temperature, radiation and dust exposure.\n\n[b]NASA reference material[/b]\nNASA ECLSS: https://www.nasa.gov/reference/environmental-control-and-life-support-systems-eclss/\nNASA Lunar Prospector neutron spectrometer: https://science.nasa.gov/mission/lunar-prospector/\nNASA lunar dust health and operations brief: https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-011-lunar-dust-technical-brief.pdf\nNASA lunar surface environment: https://www.nasa.gov/reference/moonbase-environment/\nNASA Artemis radiation monitoring and shelter thresholds: https://science.nasa.gov/missions/artemis/artemis-2/to-protect-artemis-ii-astronauts-nasa-experts-keep-eyes-on-sun/\n\nThis is a playable research-training scenario based on NASA-published methods. It is a fictional habitat, and its minigames are not flight procedures or medical advice."
+	return "[b]FIELD MANUAL — HABITAT OPERATIONS[/b]\n\n[b]How a shift works[/b]\nThe campaign lasts five days. Each day has two work shifts and an 8-hour sleep period after Shift 2. Each shift offers a mission assignment; optional station drills earn bonus points. You do not need to finish every task. Use Mission Control (TAB) to choose a mission, close it, walk to its station and press E. You can skip a shift from Mission Control.\n\n[b]Scoring and research[/b]\nPoints marked “next day” are credited when the next day starts. Research Actions add Research AP (separate from score). Field samples must be collected outside and analyzed in the Lab. Failed minigames can be retried, but mistakes use more TP.\n\n[b]Survival deadlines[/b]\n• Day 2: Inspect the airlock filter stages. Clean the dust by Day 3 or the habitat air system fails.\n• Day 2: Check water storage to avoid the −1 Day 3 score penalty.\n• Day 3: Use ultrasonic leak detection or correlate the pressure drop with the seismometer impact record.\n• Day 4 Slot 1: Repair the leak if located, then enter the shielded core. You may do both in this slot. Power-intensive work during the solar-particle warning is fatal.\n• Day 5 Slot 1: The pressure boundary must be repaired before the moonquake.\n• Garden: Each unchecked day increases crop-failure risk. A failed crop causes mission loss unless the rack is checked and replanted in time.\n\n[b]Research notes[/b]\nNeutron spectroscopy measures neutron populations. Hydrogen moderates neutrons, so a reduced epithermal-neutron signal can indicate hydrogen-bearing material; it does not directly image or prove an ice deposit. Record the rover transect, background and uncertainty.\n\nLife support tasks are separated: water recovery purifies and checks water; oxygen generation electrolyzes water; air revitalization removes CO₂ and trace contaminants. Never treat a single “oxygen recycling” reading as proof that all loops work.\n\nLunar rock and regolith tasks are screening studies. Log sample IDs and sites, keep samples sealed, and record mineral observations without claiming a deposit is economically valuable. The Moon has no Earth-like weather; the surface station records temperature, radiation and dust exposure.\n\n[b]NASA reference material[/b]\nNASA ECLSS: https://www.nasa.gov/reference/environmental-control-and-life-support-systems-eclss/\nNASA Lunar Prospector neutron spectrometer: https://science.nasa.gov/mission/lunar-prospector/\nNASA lunar dust health and operations brief: https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-011-lunar-dust-technical-brief.pdf\nNASA lunar surface environment: https://www.nasa.gov/reference/moonbase-environment/\nNASA Artemis radiation monitoring and shelter thresholds: https://science.nasa.gov/missions/artemis/artemis-2/to-protect-artemis-ii-astronauts-nasa-experts-keep-eyes-on-sun/\n\nThis is a playable research-training scenario based on NASA-published methods. It is a fictional habitat, and its minigames are not flight procedures or medical advice."
 
 
 func _game_over(reason: String) -> void:

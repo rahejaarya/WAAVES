@@ -37,7 +37,9 @@ var minimap: Control
 var campaign_ui: CanvasLayer
 var interaction_hint: Label
 var hovered_station := ""
+var station_targets: Array[StaticBody3D] = []
 var materials: Dictionary = {}
+var soft_edge_meshes: Dictionary = {}
 var rooms_by_id: Dictionary = {}
 
 
@@ -56,6 +58,8 @@ func _ready() -> void:
 	_build_corridors()
 	_build_outside()
 	_add_room_props()
+	station_targets.clear()
+	_collect_station_targets(world_root)
 	_build_camera()
 	_build_hud()
 	campaign_ui = CanvasLayer.new()
@@ -75,7 +79,7 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_E and hovered_station != "" and not campaign_ui.call("is_board_open"):
+	if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_E or event.physical_keycode == KEY_E) and hovered_station != "" and not campaign_ui.call("is_board_open"):
 		campaign_ui.call("interact_with_station", hovered_station)
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		if is_instance_valid(campaign_ui) and campaign_ui.call("is_board_open"):
@@ -790,30 +794,30 @@ func _add_restroom_props() -> void:
 func _add_lab_props() -> void:
 	# A central aisle connects both bulkhead doors; bench equipment is visibly lab-specific.
 	_add_seismometer_station()
-	for bench_z: float in [-4.0, 4.0]:
-		var lab_bench := _make_solid_box("Laboratory instrument bench", Vector3(-18.0, 0.86, bench_z), Vector3(7.0, 0.22, 1.5), Color("#52666c"))
-		lab_bench.set_meta("station_id", "lab_console")
-		for leg_x: float in [-3.0, 3.0]:
-			_make_solid_box("Bench pedestal", Vector3(-18.0 + leg_x, 0.43, bench_z), Vector3(0.42, 0.72, 1.22), Color("#354a51"))
-		_make_visual_box("Bench edge safety rail", Vector3(-18.0, 0.99, bench_z + 0.68), Vector3(6.7, 0.055, 0.07), Color("#b0c0bc"))
-		for instrument_x: float in [-20.35, -17.65, -15.0]:
-			_add_lab_instrument(instrument_x, bench_z)
+	for bench_x: float in [-21.1, -14.9]:
+		for bench_z: float in [-3.8, 3.8]:
+			var lab_bench := _make_solid_box("Laboratory instrument bench", Vector3(bench_x, 0.86, bench_z), Vector3(2.2, 0.22, 1.5), Color("#52666c"))
+			lab_bench.set_meta("station_id", "lab_console")
+			for leg_x: float in [-0.78, 0.78]:
+				_make_solid_box("Bench pedestal", Vector3(bench_x + leg_x, 0.43, bench_z), Vector3(0.32, 0.72, 1.22), Color("#354a51"))
+			_make_visual_box("Bench edge safety rail", Vector3(bench_x, 0.99, bench_z + 0.68), Vector3(2.05, 0.055, 0.07), Color("#b0c0bc"))
+			_add_lab_instrument(bench_x, bench_z)
 	for sample_x: float in [-20.8, -19.5, -16.5, -15.2]:
 		_make_visual_cylinder("Sealed lunar dust sample canister", Vector3(sample_x, 1.27, 4.0), 0.27, 0.58, Color("#b7b99b"))
 		_make_visual_cylinder("Sample canister locking cap", Vector3(sample_x, 1.59, 4.0), 0.3, 0.1, Color("#667982"))
-	_make_solid_box("NASA habitat model exhibit plinth", Vector3(-18.0, 0.18, 0.0), Vector3(2.7, 0.32, 2.7), Color("#626e71"))
-	_make_visual_box("Habitat model display label", Vector3(-18.0, 0.48, -0.86), Vector3(1.65, 0.18, 0.045), Color("#17343c"))
-	_make_textured_screen("Moonquake waveform display", Vector3(-18.0, 1.12, -0.888), Vector2(0.82, 0.32), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
-	var lab_interaction := _make_solid_box("Laboratory task terminal", Vector3(-18.0, 1.7, -5.78), Vector3(2.5, 1.4, 0.16), Color("#243b42"))
+	_make_solid_box("NASA habitat model exhibit plinth", Vector3(-22.0, 0.18, 1.0), Vector3(2.7, 0.32, 2.7), Color("#626e71"))
+	_make_visual_box("Habitat model display label", Vector3(-22.0, 0.48, 0.14), Vector3(1.65, 0.18, 0.045), Color("#17343c"))
+	_make_textured_screen("Moonquake waveform display", Vector3(-22.0, 1.12, 0.112), Vector2(0.82, 0.32), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
+	var lab_interaction := _make_solid_box("Laboratory task terminal", Vector3(-14.35, 1.7, -5.78), Vector3(2.5, 1.4, 0.16), Color("#243b42"))
 	lab_interaction.set_meta("station_id", "lab_console")
-	_make_text_panel("LAB WORKSTATION\nSamples / instruments", Vector3(-18.0, 2.65, -5.55), Vector2(3.2, 0.62), 0.0)
+	_make_text_panel("LAB WORKSTATION\nSamples / instruments", Vector3(-14.35, 2.65, -5.55), Vector2(3.2, 0.62), 0.0)
 	for model_path: String in ["res://assets/nasa/habitat-demonstration-unit-part-1.glb", "res://assets/nasa/habitat-demonstration-unit-part-2.glb"]:
 		var habitat_scene := load(model_path) as PackedScene
 		if habitat_scene != null:
 			var exhibit := habitat_scene.instantiate()
 			exhibit.name = model_path.get_file().get_basename().replace("-", " ") + " scale model"
 			exhibit.scale = Vector3.ONE * 0.001
-			exhibit.position = Vector3(-18.0, 0.72, 0.37)
+			exhibit.position = Vector3(-22.0, 0.72, 1.37)
 			world_root.add_child(exhibit)
 		else:
 			push_warning("NASA habitat model for the lab display could not be loaded: " + model_path)
@@ -1040,7 +1044,78 @@ func _make_visual_strut(strut_name: String, start: Vector3, finish: Vector3, rad
 
 
 func _make_solid_box(box_name: String, box_position: Vector3, box_size: Vector3, color: Color, rotation_y: float = 0.0) -> StaticBody3D:
-	return _make_box(world_root, box_name, box_position, box_size, color, rotation_y)
+	var body := _make_box(world_root, box_name, box_position, box_size, color, rotation_y)
+	# Keep the bunk design intact; soften the hard edges on the rest of the
+	# furniture and equipment while leaving their gameplay collision unchanged.
+	if not box_name.begins_with("Crew bunk"):
+		for child: Node in body.get_children():
+			if child is MeshInstance3D:
+				child.mesh = _soft_edge_box_mesh(box_size)
+				var finish := _material(color).duplicate() as StandardMaterial3D
+				finish.roughness = 0.64
+				finish.metallic = 0.14
+				child.material_override = finish
+				break
+	return body
+
+
+func _soft_edge_box_mesh(box_size: Vector3) -> ArrayMesh:
+	# A small bevel catches light along furniture edges without changing the
+	# room shell, floors, or bed meshes.
+	if soft_edge_meshes.has(box_size):
+		return soft_edge_meshes[box_size]
+	var half := box_size * 0.5
+	var bevel := minf(box_size.x, minf(box_size.y, box_size.z)) * 0.14
+	var inner := half - Vector3.ONE * bevel
+	var faces := [
+		[Vector3.RIGHT, Vector3(0, 0, -1), Vector3.UP],
+		[Vector3.LEFT, Vector3(0, 0, 1), Vector3.UP],
+		[Vector3.UP, Vector3.RIGHT, Vector3(0, 0, -1)],
+		[Vector3.DOWN, Vector3.RIGHT, Vector3(0, 0, 1)],
+		[Vector3.BACK, Vector3.RIGHT, Vector3.UP],
+		[Vector3.FORWARD, Vector3.LEFT, Vector3.UP]
+	]
+	var divisions := 3
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for face: Array in faces:
+		var normal: Vector3 = face[0]
+		var axis_u: Vector3 = face[1]
+		var axis_v: Vector3 = face[2]
+		for v in range(divisions):
+			for u in range(divisions):
+				var u0 := -1.0 + 2.0 * float(u) / divisions
+				var u1 := -1.0 + 2.0 * float(u + 1) / divisions
+				var v0 := -1.0 + 2.0 * float(v) / divisions
+				var v1 := -1.0 + 2.0 * float(v + 1) / divisions
+				var p00 := normal * _box_axis_extent(half, normal) + axis_u * (_box_axis_extent(half, axis_u) * u0) + axis_v * (_box_axis_extent(half, axis_v) * v0)
+				var p10 := normal * _box_axis_extent(half, normal) + axis_u * (_box_axis_extent(half, axis_u) * u1) + axis_v * (_box_axis_extent(half, axis_v) * v0)
+				var p11 := normal * _box_axis_extent(half, normal) + axis_u * (_box_axis_extent(half, axis_u) * u1) + axis_v * (_box_axis_extent(half, axis_v) * v1)
+				var p01 := normal * _box_axis_extent(half, normal) + axis_u * (_box_axis_extent(half, axis_u) * u0) + axis_v * (_box_axis_extent(half, axis_v) * v1)
+				_add_soft_edge_vertex(surface, p00, inner, bevel)
+				_add_soft_edge_vertex(surface, p10, inner, bevel)
+				_add_soft_edge_vertex(surface, p11, inner, bevel)
+				_add_soft_edge_vertex(surface, p00, inner, bevel)
+				_add_soft_edge_vertex(surface, p11, inner, bevel)
+				_add_soft_edge_vertex(surface, p01, inner, bevel)
+	var mesh := surface.commit()
+	soft_edge_meshes[box_size] = mesh
+	return mesh
+
+
+func _box_axis_extent(half: Vector3, axis: Vector3) -> float:
+	if absf(axis.x) > 0.5:
+		return half.x
+	if absf(axis.y) > 0.5:
+		return half.y
+	return half.z
+
+
+func _add_soft_edge_vertex(surface: SurfaceTool, raw_position: Vector3, inner: Vector3, bevel: float) -> void:
+	var core := raw_position.clamp(-inner, inner)
+	var normal := (raw_position - core).normalized()
+	surface.set_normal(normal)
+	surface.add_vertex(core + normal * bevel)
 
 
 func _make_capsule_visual(capsule_name: String, capsule_position: Vector3, capsule_scale: Vector3, color: Color) -> MeshInstance3D:
@@ -1095,7 +1170,7 @@ func _build_hud() -> void:
 	add_child(layer)
 	var top_plate := Panel.new()
 	top_plate.position = Vector2(12, 10)
-	top_plate.size = Vector2(570, 112)
+	top_plate.size = Vector2(570, 92)
 	top_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top_plate.add_theme_stylebox_override("panel", _hud_style(Color(0.025, 0.065, 0.085, 0.82), Color("#56c6c2")))
 	layer.add_child(top_plate)
@@ -1185,32 +1260,40 @@ func _update_station_hover() -> void:
 	interaction_hint.text = ""
 	if campaign_ui.call("is_board_open") or follow_camera == null:
 		return
-	var origin := follow_camera.global_position
-	var ray_direction := -follow_camera.global_transform.basis.z
-	var exclude: Array[RID] = [player.get_rid()]
-	for _attempt in range(10):
-		var query := PhysicsRayQueryParameters3D.create(origin, origin + ray_direction * 4.5)
-		query.exclude = exclude
-		var hit := get_world_3d().direct_space_state.intersect_ray(query)
-		if hit.is_empty():
-			break
-		var collider: Object = hit["collider"]
-		if collider.has_meta("station_id"):
-			hovered_station = str(collider.get_meta("station_id"))
-			break
-		# Only step through nearby trim or small control geometry. A wall or
-		# large piece of equipment must still block interaction through it.
-		if float(hit["position"].distance_to(origin)) > 0.85:
-			break
-		if collider is CollisionObject3D:
-			exclude.append(collider.get_rid())
-		else:
-			break
+	var current_room := _room_id_at_player()
+	var best_distance := 3.4
+	for station: StaticBody3D in station_targets:
+		if not is_instance_valid(station):
+			continue
+		var station_id := str(station.get_meta("station_id"))
+		if _station_room(station_id, station.global_position) != current_room:
+			continue
+		var offset := station.global_position - player.global_position
+		var horizontal_distance := Vector2(offset.x, offset.z).length()
+		if absf(offset.y) > 2.5 or horizontal_distance > best_distance:
+			continue
+		best_distance = horizontal_distance
+		hovered_station = station_id
 	if hovered_station != "":
 		if hovered_station == "bed":
-			interaction_hint.text = "CREW BUNK  •  PRESS E TO SLEEP" if campaign_ui.get("awaiting_bed") else "CREW BUNK  •  FINISH TODAY'S TASKS BEFORE SLEEPING"
+			interaction_hint.text = "REST PERIOD  •  PRESS E TO SLEEP (8 HOURS)" if campaign_ui.get("awaiting_bed") else "CREW BUNK  •  AVAILABLE AFTER BOTH SHIFTS"
 		else:
-			interaction_hint.text = "%s  •  PRESS E TO START TASK" % hovered_station.replace("_", " ").to_upper()
+			interaction_hint.text = "%s  •  PRESS E TO PLAY TASK" % hovered_station.replace("_", " ").to_upper()
+
+
+func _collect_station_targets(parent: Node) -> void:
+	for child: Node in parent.get_children():
+		if child is StaticBody3D and child.has_meta("station_id"):
+			station_targets.append(child)
+		_collect_station_targets(child)
+
+
+func _station_room(station_id: String, station_position: Vector3) -> String:
+	if station_id in ["neutron_station", "rover_station", "field_station", "sample_station", "hull_station", "solar_station", "eva_station"]:
+		return "outside"
+	if station_id == "bed":
+		return "sleep"
+	return _room_id_at_position(station_position)
 
 
 func _make_label(text: String, label_position: Vector2, font_size: int, color: Color) -> Label:
@@ -1239,7 +1322,11 @@ func _hud_style(fill: Color, border: Color) -> StyleBoxFlat:
 
 
 func _room_id_at_player() -> String:
-	var player_position := Vector2(player.global_position.x, player.global_position.z)
+	return _room_id_at_position(player.global_position)
+
+
+func _room_id_at_position(world_position: Vector3) -> String:
+	var player_position := Vector2(world_position.x, world_position.z)
 	for room: Dictionary in ROOMS:
 		var center: Vector2 = room["center"]
 		var room_size: Vector2 = room["size"]
