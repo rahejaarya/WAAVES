@@ -100,6 +100,16 @@ func toggle_board() -> void:
 	_set_board_open(not bool(board.visible))
 
 
+func interact_with_station(station_id: String) -> void:
+	if ended or active:
+		return
+	for index in range(slot_options.size()):
+		if str(slot_options[index].get("station", "")) == station_id:
+			_start_action(index)
+			return
+	outcome_label.text = "No active task for this station in the current shift. Open Mission Control with TAB to review tasks."
+
+
 func _set_board_open(open: bool) -> void:
 	board.visible = open
 	if is_instance_valid(player):
@@ -303,6 +313,10 @@ func _toggle_manual() -> void:
 func _choose_action(index: int) -> void:
 	if ended or active or index < 0 or index >= slot_options.size():
 		return
+	_start_action(index)
+
+
+func _start_action(index: int) -> void:
 	var action: Dictionary = slot_options[index]
 	var best_cost := ceili(float(action["tp"]) * 0.5)
 	if time_points < best_cost:
@@ -803,7 +817,8 @@ func _make_action(id: String, title: String, brief: String, tp: int, points: int
 		result_text = "The crew is inside the shielded core before peak exposure."
 	elif id == "water_recovery":
 		result_text = "Recovery-loop restriction is corrected and the verification sequence passed."
-	return {"id": id, "title": title, "brief": brief, "tp": tp, "points": points, "when": when, "game": game, "location": location, "challenge": challenge, "category": category, "result": result_text}
+	var station := "seismometer" if id in ["seismometer_bump", "rerun_seismometer", "seismo_leak", "quake_seismometer"] else ""
+	return {"id": id, "title": title, "brief": brief, "tp": tp, "points": points, "when": when, "game": game, "location": location, "challenge": challenge, "category": category, "result": result_text, "station": station}
 
 
 func _at_location(location: String) -> bool:

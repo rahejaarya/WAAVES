@@ -35,6 +35,8 @@ var follow_camera: Camera3D
 var room_label: Label
 var minimap: Control
 var campaign_ui: CanvasLayer
+var interaction_hint: Label
+var hovered_station := ""
 var materials: Dictionary = {}
 var rooms_by_id: Dictionary = {}
 
@@ -69,10 +71,13 @@ func _process(_delta: float) -> void:
 	var current_room_id := _room_id_at_player()
 	room_label.text = "AREA  /  " + _room_title(current_room_id)
 	minimap.set("current_room_id", current_room_id)
+	_update_station_hover()
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_E and hovered_station != "" and not campaign_ui.call("is_board_open"):
+		campaign_ui.call("interact_with_station", hovered_station)
+	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		if is_instance_valid(campaign_ui) and campaign_ui.call("is_board_open"):
 			campaign_ui.call("toggle_board")
 			return
@@ -252,6 +257,10 @@ func _build_wall(room: Dictionary, side: String, has_door: bool) -> void:
 
 
 func _build_corridors() -> void:
+	# Extend each corridor deck beneath the doorway thresholds. Its slight height
+	# offset prevents coplanar floor surfaces from z-fighting at room joins.
+	var corridor_deck_y := -FLOOR_THICKNESS * 0.5 + 0.025
+	var doorway_overlap := 0.55
 	for link: Array in LINKS:
 		var first: Dictionary = rooms_by_id[link[0]]
 		var second: Dictionary = rooms_by_id[link[1]]
@@ -268,13 +277,13 @@ func _build_corridors() -> void:
 		var corridor_center := Vector2.ZERO
 		var corridor_size := Vector2.ZERO
 		if absf(delta.x) > absf(delta.y):
-			var length := absf(delta.x) - (first_size.x + second_size.x) * 0.5
+			var length := absf(delta.x) - (first_size.x + second_size.x) * 0.5 + doorway_overlap * 2.0
 			if length <= 0.05:
 				continue
-			corridor_center = Vector2((first_center.x + second_center.x) * 0.5, first_center.y)
+			corridor_center = Vector2((first_center.x + second_center.x) * 0.5, (first_center.y + second_center.y) * 0.5)
 			corridor_size = Vector2(length, DOOR_WIDTH)
 		else:
-			var length := absf(delta.y) - (first_size.y + second_size.y) * 0.5
+			var length := absf(delta.y) - (first_size.y + second_size.y) * 0.5 + doorway_overlap * 2.0
 			if length <= 0.05:
 				continue
 			corridor_center = Vector2(first_center.x, (first_center.y + second_center.y) * 0.5)
@@ -282,7 +291,7 @@ func _build_corridors() -> void:
 		_make_box(
 			world_root,
 			str(first["title"]) + " to " + str(second["title"]) + " Hall",
-			Vector3(corridor_center.x, -FLOOR_THICKNESS * 0.5, corridor_center.y),
+			Vector3(corridor_center.x, corridor_deck_y, corridor_center.y),
 			Vector3(corridor_size.x, FLOOR_THICKNESS, corridor_size.y),
 			CORRIDOR_COLOR
 		)
@@ -667,7 +676,8 @@ func _add_lab_props() -> void:
 func _add_seismometer_station() -> void:
 	# A visible lunar seismometer makes seismic tasks discoverable in the Lab.
 	_make_solid_box("Lunar seismometer isolation plinth", Vector3(-18.0, 0.22, -1.15), Vector3(1.65, 0.38, 1.4), Color("#46585b"))
-	_make_solid_box("Lunar seismometer sensor housing", Vector3(-18.0, 0.7, -1.15), Vector3(1.08, 0.55, 0.92), Color("#c0c9c2"))
+	var sensor := _make_solid_box("Lunar seismometer sensor housing", Vector3(-18.0, 0.7, -1.15), Vector3(1.08, 0.55, 0.92), Color("#c0c9c2"))
+	sensor.set_meta("station_id", "seismometer")
 	_make_visual_cylinder("Seismometer leveling collar", Vector3(-18.0, 1.02, -1.15), 0.36, 0.12, Color("#697c7d"))
 	_make_visual_cylinder("Seismometer sensor cap", Vector3(-18.0, 1.14, -1.15), 0.23, 0.18, Color("#9ab2ad"))
 	_make_text_panel("LUNAR SEISMOMETER\nWaveform / calibration", Vector3(-18.0, 1.65, -1.15), Vector2(1.8, 0.48), PI)
@@ -850,6 +860,16 @@ func _build_hud() -> void:
 	layer.add_child(room_label)
 	var objective := _make_label("Walk the habitat and lunar surface  /  TAB: mission control  /  ESC: release cursor", Vector2(22, 65), 11, Color("#b4c7ca"))
 	layer.add_child(objective)
+	interaction_hint = _make_label("", Vector2.ZERO, 15, Color("#baf9f3"))
+	interaction_hint.anchor_left = 0.5
+	interaction_hint.anchor_right = 0.5
+	interaction_hint.anchor_top = 0.72
+	interaction_hint.anchor_bottom = 0.72
+	interaction_hint.offset_left = -260
+	interaction_hint.offset_right = 260
+	interaction_hint.offset_bottom = 36
+	interaction_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	layer.add_child(interaction_hint)
 	var controls := _make_label("MOVE  WASD / ARROWS      JUMP  SPACE      LOOK  MOUSE", Vector2.ZERO, 11, Color("#d3e3e4"))
 	controls.anchor_top = 1.0
 	controls.anchor_bottom = 1.0
@@ -873,6 +893,23 @@ func _build_hud() -> void:
 	minimap.offset_bottom = 278.0
 	minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(minimap)
+
+
+func _update_station_hover() -> void:
+	hovered_station = ""
+	interaction_hint.text = ""
+	if campaign_ui.call("is_board_open") or follow_camera == null:
+		return
+	var origin := follow_camera.global_position
+	var query := PhysicsRayQueryParameters3D.create(origin, origin - follow_camera.global_transform.basis.z * 3.0)
+	query.exclude = [player]
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return
+	var collider: Object = hit["collider"]
+	if collider.has_meta("station_id"):
+		hovered_station = str(collider.get_meta("station_id"))
+		interaction_hint.text = "LUNAR SEISMOMETER  •  PRESS E TO OPEN TASK"
 
 
 func _make_label(text: String, label_position: Vector2, font_size: int, color: Color) -> Label:
