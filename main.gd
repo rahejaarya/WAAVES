@@ -1077,15 +1077,14 @@ func _make_emissive_box(box_name: String, box_position: Vector3, box_size: Vecto
 
 func _build_camera() -> void:
 	follow_camera = Camera3D.new()
-	follow_camera.name = "Over Shoulder Camera"
+	follow_camera.name = "First Person Camera"
 	follow_camera.projection = Camera3D.PROJECTION_PERSPECTIVE
-	follow_camera.fov = 72.0
+	follow_camera.fov = 78.0
 	follow_camera.near = 0.1
 	follow_camera.far = 800.0
-	follow_camera.position = Vector3(0.0, 2.35, 6.2)
-	follow_camera.rotation.x = deg_to_rad(-12.0)
+	follow_camera.position = Vector3(0, 1.56, 0)
 	player.add_child(follow_camera)
-	player.get_node("Astronaut").visible = true
+	player.get_node("Astronaut").visible = false
 	follow_camera.current = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
