@@ -42,6 +42,7 @@ var random_source := RandomNumberGenerator.new()
 
 var status_label: Label
 var banner_label: Label
+var deadline_label: Label
 var event_label: Label
 var resource_label: Label
 var choice_list: VBoxContainer
@@ -73,6 +74,7 @@ func _process(_delta: float) -> void:
 		if not active and not ended:
 			var place: String = get_parent().call("_room_title", get_parent().call("_room_id_at_player"))
 			banner_label.text = "LOCATION: %s   |   TAB: MISSION CONTROL" % place
+			deadline_label.text = _deadline_text()
 
 
 func _input(event: InputEvent) -> void:
@@ -121,6 +123,12 @@ func _build_interface() -> void:
 	banner_label.add_theme_font_size_override("font_size", 12)
 	banner_label.add_theme_color_override("font_color", Color("#d3e3e4"))
 	root.add_child(banner_label)
+	deadline_label = Label.new()
+	deadline_label.position = Vector2(22, 143)
+	deadline_label.custom_minimum_size.x = 430
+	deadline_label.add_theme_font_size_override("font_size", 12)
+	deadline_label.add_theme_color_override("font_color", Color("#ffd18a"))
+	root.add_child(deadline_label)
 
 	board = Control.new()
 	board.name = "Mission Control Board"
@@ -653,11 +661,11 @@ func _build_slot_options() -> Array[Dictionary]:
 	if day == 1 and slot == 1:
 		options = [
 			_make_action("neutron_survey", "Drive the neutron spectrometer transect", "Map hydrogen-sensitive neutron counts; a low epithermal-neutron signal is a water-ice proxy, not a direct image.", 10, 5, "next", "scan", "outside", "Compare the three target readings with the background transect. The instrument records count rates for later map comparison."),
-			_make_action("seismometer_bump", "Check the seismometer", "Review instrument status and the current lunar seismic channel.", 10, 0, "now", "dial", "lab", "Match the channel calibration value shown by the instrument. The accidental contact on this shift invalidates the current run."),
+			_make_action("seismometer_bump", "Calibrate the lunar seismometer", "In the Lab, use the labeled sensor station to set its baseline. Contact invalidates this first run; recalibrate next slot.", 10, 0, "now", "dial", "lab", "At the labeled SEISMOMETER station, set the calibration reference, verify the baseline, then record the contact flag. This run is invalidated and must be repeated."),
 			_make_action("water_recovery", "Improve water-recovery hardware efficiency", "Inspect the recovery loop, replace the limiting filter, and verify the conductivity reading. This long task uses the rest of the shift.", 20, 10, "now", "valves", "main", "Verify the recovery sequence in order: water feed, oxygen cell, CO₂ return. The improved loop supports both potable water and oxygen generation."),
 		]
 	elif day == 1 and slot == 2:
-		var seismic_option := _make_action("rerun_seismometer", "A. Re-run the seismometer calibration", "Repeat the calibration after the instrument was touched during the first shift.", 10, 7, "now", "dial", "lab", "Set the instrument to its calibration reference and verify the baseline waveform.") if seismometer_recalibration_due else _make_action("heat_probe", "B. Deploy the heat probe", "Record a thermal gradient at the lunar surface; this measures local heat flow rather than a planet-wide core temperature.", 10, 5, "now", "scan", "outside", "Compare the three stable probe readings and reject the outlier before logging the thermal profile.")
+		var seismic_option := _make_action("rerun_seismometer", "A. Re-run the lunar seismometer calibration", "Return to the labeled sensor station in the Lab and repeat the baseline after accidental contact.", 10, 7, "now", "dial", "lab", "At the labeled SEISMOMETER station, set the reference calibration and verify a stable baseline waveform.") if seismometer_recalibration_due else _make_action("heat_probe", "B. Deploy the heat probe", "Record a thermal gradient at the lunar surface; this measures local heat flow rather than a planet-wide core temperature.", 10, 5, "now", "scan", "outside", "Compare the three stable probe readings and reject the outlier before logging the thermal profile.")
 		options = [
 			_make_action("soil_composition", "Analyze soil composition", "Separate a small regolith aliquot and log its visible mineral fractions.", 10, 6, "now", "sample", "lab", "Select three mineral-bearing areas in the sample image; record the result as a composition screen, not a resource guarantee."),
 			seismic_option,
@@ -681,7 +689,7 @@ func _build_slot_options() -> Array[Dictionary]:
 		if not filters_cleaned:
 			options.append(_clean_filter_action() if filters_inspected else _inspect_and_clean_filter_action())
 		if not leak_found:
-			options.append(_make_action("seismo_leak", "Use the seismometer record to locate the impact", "Review the overnight impact waveform, then confirm the pressure drop at the habitat boundary.", 10, 6, "now", "scan", "lab", "Compare impact time and amplitude, then correlate it with the pressure trend. The confirmed location is queued for repair."))
+			options.append(_make_action("seismo_leak", "Use the Lab seismometer record to locate the impact", "At the labeled sensor station, compare the overnight waveform timestamp with the cabin pressure drop to narrow the puncture location.", 10, 6, "now", "scan", "lab", "Use the labeled SEISMOMETER station: match impact time and amplitude to the pressure trend. Record the likely hull sector; then repair it outside."))
 		if options.size() < 3:
 			_append_random_actions(options, 3 - options.size())
 	elif day == 4 and slot == 1:
@@ -706,7 +714,7 @@ func _build_slot_options() -> Array[Dictionary]:
 		_append_random_actions(options, 2)
 	else:
 		options = [
-			_make_action("quake_seismometer", "Turn on the seismometer", "Record the moonquake waveform and compare its arrival time across sensors. You can survive without taking shelter.", 10, 8, "now", "dial", "lab", "Calibrate the recording channel and verify the event trigger is armed."),
+			_make_action("quake_seismometer", "Record the moonquake on the Lab seismometer", "Use the labeled station to arm the calibrated waveform recorder and capture the event. You can survive without taking shelter.", 10, 8, "now", "dial", "lab", "At the labeled SEISMOMETER station, confirm the calibrated baseline and arm the event trigger before the shaking."),
 			_make_action("quake_shelter", "Take shelter", "Move away from equipment and verify the crew is secured during the moonquake.", 10, 5, "now", "inspect", "main", "Confirm three crew restraint points and the shelter status indicator."),
 		]
 		_append_random_actions(options, 1)
@@ -819,6 +827,23 @@ func _event_text() -> String:
 			return "EVENT: Solar particle warning for Slot 2. Reach the shielded core in Slot 1. Dust-cleaning and shelter deadlines are survival-critical."
 		_:
 			return "EVENT: Moonquake. Verify the hull patch before the shaking begins; record the seismometer or take shelter."
+
+
+func _deadline_text() -> String:
+	var deadlines: Array[String] = []
+	if day <= 3 and not filters_cleaned:
+		deadlines.append("FILTER DUST: clean by Day 3")
+	if day <= 3 and not water_checked:
+		deadlines.append("WATER CHECK: optional, −1 point if missed")
+	if day >= 3 and day <= 5 and not leak_fixed:
+		deadlines.append("HULL LEAK: patch before Day 5 Slot 2")
+	if day == 4 and not flare_shelter_reached:
+		deadlines.append("SOLAR PARTICLES: shelter this slot")
+	if garden_failure_pending:
+		deadlines.append("CROP FAILURE: inspect Garden today")
+	if deadlines.is_empty():
+		return "SURVIVAL SYSTEMS NOMINAL  /  Current shift ends after Slot 2"
+	return "DEADLINES  /  " + "   •   ".join(deadlines)
 
 
 func _manual_text() -> String:

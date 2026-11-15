@@ -632,6 +632,7 @@ func _add_restroom_props() -> void:
 
 func _add_lab_props() -> void:
 	# A central aisle connects both bulkhead doors; bench equipment is visibly lab-specific.
+	_add_seismometer_station()
 	for bench_z: float in [-4.0, 4.0]:
 		_make_solid_box("Laboratory instrument bench", Vector3(-18.0, 0.92, bench_z), Vector3(7.0, 0.18, 1.5), Color("#7e8e8d"))
 		for leg_x: float in [-3.0, 3.0]:
@@ -661,6 +662,33 @@ func _add_lab_props() -> void:
 		var case_x := -20.5 + float(case_index % 2) * 4.8
 		var case_z := 2.9 + float(case_index / 2) * 2.0
 		_make_solid_box("Instrument storage case", Vector3(case_x, 1.24, case_z), Vector3(1.1, 0.46, 0.75), Color("#849392"))
+
+
+func _add_seismometer_station() -> void:
+	# A visible lunar seismometer makes seismic tasks discoverable in the Lab.
+	_make_solid_box("Lunar seismometer isolation plinth", Vector3(-18.0, 0.22, -1.15), Vector3(1.65, 0.38, 1.4), Color("#46585b"))
+	_make_solid_box("Lunar seismometer sensor housing", Vector3(-18.0, 0.7, -1.15), Vector3(1.08, 0.55, 0.92), Color("#c0c9c2"))
+	_make_visual_cylinder("Seismometer leveling collar", Vector3(-18.0, 1.02, -1.15), 0.36, 0.12, Color("#697c7d"))
+	_make_visual_cylinder("Seismometer sensor cap", Vector3(-18.0, 1.14, -1.15), 0.23, 0.18, Color("#9ab2ad"))
+	_make_text_panel("LUNAR SEISMOMETER\nWaveform / calibration", Vector3(-18.0, 1.65, -1.15), Vector2(1.8, 0.48), PI)
+	_make_text_panel("SEISMOMETER\nUse: Day 1 calibration, Day 3 impact location, Day 5 moonquake recording", Vector3(-18.0, 2.25, -5.72), Vector2(4.2, 0.72), 0.0)
+	_make_textured_screen("Seismometer waveform instrument display", Vector3(-18.0, 1.72, -5.83), Vector2(2.0, 1.0), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
+
+
+func _make_text_panel(panel_text: String, panel_position: Vector3, panel_size: Vector2, rotation_y: float) -> void:
+	var backing := _make_visual_box("Equipment information panel", panel_position, Vector3(panel_size.x, panel_size.y, 0.08), Color("#17343c"))
+	backing.rotation.y = rotation_y
+	var label := Label3D.new()
+	label.name = "Equipment label"
+	label.text = panel_text
+	label.position = panel_position + Vector3(0.0, 0.0, 0.055)
+	label.rotation.y = rotation_y
+	label.pixel_size = 0.004
+	label.font_size = 36
+	label.modulate = Color("#baf9f3")
+	label.outline_size = 4
+	label.outline_modulate = Color("#071217")
+	world_root.add_child(label)
 
 
 func _add_main_room_props() -> void:
