@@ -35,6 +35,9 @@ var pinned_action_id := ""
 var active := false
 var ended := false
 var final_status := ""
+var final_won := false
+var final_reason := ""
+var final_tip := ""
 var mistakes := 0
 var progress := 0
 var target_progress := 0
@@ -242,14 +245,7 @@ func _refresh_board() -> void:
 	close_button.visible = not ended
 	close_button.text = "Stop task [Tab]" if active else "Close [Tab]"
 	if ended:
-		choice_list.visible = false
-		manual_panel.visible = false
-		challenge_panel.visible = false
-		manual_button.visible = false
-		begin_button.visible = true
-		begin_button.text = "PLAY AGAIN"
-		outcome_label.text = final_status
-		outcome_label.visible = true
+		_show_end_screen()
 		return
 	begin_button.visible = false
 	if choice_list.visible:
@@ -886,10 +882,10 @@ func complete_action(action: Dictionary) -> void:
 		"flare_shelter":
 			shelter_taken = true
 		"flare_power":
-			_game_over("You used the solar panels while the solar flare was hitting. The flare's radiation got you.")
+			_game_over("You used the solar panels while the solar flare was hitting. The flare's radiation got you.", "When Mission Control warns about a solar flare, don't use power. Pick 'Go to the radiation shelter' instead.")
 			return
 	if day == 4 and slot == 2 and not shelter_taken:
-		_game_over("You didn't go to the radiation shelter. The solar flare hit while you were out working.")
+		_game_over("You didn't go to the radiation shelter. The solar flare hit while you were out working.", "On the morning of the solar flare (Day 4), pick 'Go to the radiation shelter'.")
 		return
 	outcome_label.text = "%sDone! %s" % [_code_prefix(action), str(action["result"])]
 	_advance_after_action(action_id)
@@ -901,7 +897,7 @@ func _advance_after_action(action_id: String) -> void:
 		_end_work_day()
 		return
 	if day == 5 and slot == 1 and not leak_fixed:
-		_game_over("The hole from the space rock was never fixed. When the moonquake hit, the air rushed out of the base.")
+		_game_over("The hole from the space rock was never fixed. When the moonquake hit, the air rushed out of the base.", "Find the air leak on Day 3, then pick 'Fix the hole in the wall' on the morning of Day 5.")
 		return
 	if day == LAST_DAY and slot == 2:
 		_win_campaign()
@@ -935,7 +931,7 @@ func _sleep() -> void:
 		score -= 1
 		wake_notes.append("Nobody checked the water tanks, so you lost 1 point.")
 	if day == 4 and not filters_cleaned:
-		_game_over("The moon dust in the air filters was never cleaned. Overnight it got into the air you breathe.")
+		_game_over("The moon dust in the air filters was never cleaned. Overnight it got into the air you breathe.", "Pick 'Check the air filters' on Day 2, then 'Clean the moon dust' on Day 3.")
 		return
 	outcome_label.text = "Good morning! It's Day %d.  %s" % [day, " ".join(wake_notes)]
 	_prepare_slot()
@@ -1208,7 +1204,10 @@ func _final_tally() -> String:
 	return "YOUR POINTS\n%s\n\nTOTAL: %d POINTS" % [lines, score]
 
 
-func _game_over(reason: String) -> void:
+func _game_over(reason: String, tip := "") -> void:
+	final_won = false
+	final_reason = reason
+	final_tip = tip
 	ended = true
 	active = false
 	awaiting_bed = false
@@ -1223,8 +1222,37 @@ func _win_campaign() -> void:
 	if pending_score != 0:
 		score += pending_score
 		pending_score = 0
+	final_won = true
+	final_reason = "You stayed safe on the Moon for all 5 days. Great job!"
+	final_tip = ""
 	final_status = "YOU DID IT!\nYou stayed safe on the Moon for all 5 days. Great job!\n\n%s" % _final_tally()
 	_set_board_open(true)
+
+
+# The game-over / win screen: big colored title, what happened, how to survive, score.
+func _show_end_screen() -> void:
+	var accent := Color("#7be08a") if final_won else Color("#ff6b5e")
+	choice_list.visible = false
+	manual_panel.visible = false
+	challenge_panel.visible = false
+	manual_button.visible = false
+	modal_title.text = "YOU MADE IT!" if final_won else "GAME OVER"
+	modal_title.add_theme_color_override("font_color", accent)
+	event_label.get_parent().visible = true
+	event_label.get_parent().add_theme_stylebox_override("panel", _panel_style(Color("#2a1416") if not final_won else Color("#14281a"), accent))
+	event_label.text = ("MISSION COMPLETE\n" if final_won else "WHAT HAPPENED (DAY %d)\n" % day) + final_reason
+	resource_label.get_parent().visible = true
+	resource_label.text = "FINAL SCORE:  %d POINTS" % score
+	var lines: Array[String] = []
+	if final_tip != "":
+		lines.append("HOW TO SURVIVE NEXT TIME\n" + final_tip)
+	lines.append("YOUR TASKS\n" + ("\n".join(choice_log) if not choice_log.is_empty() else "(You didn't finish any tasks.)"))
+	outcome_label.text = "\n\n".join(lines)
+	outcome_label.visible = true
+	begin_button.visible = true
+	begin_button.text = "PLAY AGAIN"
+	begin_button.add_theme_color_override("font_color", accent)
+	begin_button.add_theme_stylebox_override("normal", _panel_style(Color("#20363e"), accent))
 
 
 func _restart_campaign() -> void:
