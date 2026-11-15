@@ -53,6 +53,7 @@ var challenge_instructions: Label
 var challenge_progress: Label
 var challenge_area: Control
 var modal: PanelContainer
+var mission_scroll: ScrollContainer
 var modal_title: Label
 var board: Control
 var outcome_label: Label
@@ -160,7 +161,15 @@ func _build_interface() -> void:
 	modal.add_child(outer)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
-	outer.add_child(column)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.custom_minimum_size.y = 650
+	mission_scroll = ScrollContainer.new()
+	mission_scroll.name = "Mission Control Scroll Area"
+	mission_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mission_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mission_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	outer.add_child(mission_scroll)
+	mission_scroll.add_child(column)
 
 	var header := HBoxContainer.new()
 	column.add_child(header)
@@ -309,6 +318,7 @@ func _choose_action(index: int) -> void:
 	_set_board_open(true)
 	_start_minigame()
 	_refresh_board()
+	mission_scroll.ensure_control_visible(challenge_panel)
 
 
 func _start_minigame() -> void:
