@@ -24,6 +24,7 @@ var garden_neglect_days := 0
 var garden_failure_pending := false
 var garden_failure_days := 0
 var garden_checked_today := false
+var awaiting_bed := false
 var slot_options: Array[Dictionary] = []
 var completed_slot_actions: Array[String] = []
 var action_history: Array[String] = []
@@ -102,6 +103,12 @@ func toggle_board() -> void:
 
 func interact_with_station(station_id: String) -> void:
 	if ended or active:
+		return
+	if station_id == "bed":
+		if not awaiting_bed:
+			outcome_label.text = "The shift is still active. Finish Slot 2 before sleeping to end the day."
+			return
+		_advance_to_next_day()
 		return
 	for index in range(slot_options.size()):
 		if str(slot_options[index].get("station", "")) == station_id:
@@ -262,7 +269,7 @@ func _refresh_board() -> void:
 		return
 	modal_title.text = "MISSION CONTROL  /  DAY %d  /  SLOT %d" % [day, slot]
 	resource_label.text = "TIME POINTS  %d / %d     RESEARCH AP  %d     SCORE  %d     PENDING NEXT DAY  +%d" % [time_points, MAX_TIME_POINTS, research_points, score, pending_score]
-	event_label.text = _event_text()
+	event_label.text = "SHIFT COMPLETE  /  Go to Crew Quarters. Look at a bed and press E to sleep and begin the next day." if awaiting_bed else _event_text()
 	choice_list.visible = not manual_panel.visible
 	challenge_panel.visible = active
 	skip_button.visible = not manual_panel.visible and not active and not ended
@@ -586,6 +593,14 @@ func _advance_to_slot_two() -> void:
 
 
 func _advance_to_next_day() -> void:
+	if not awaiting_bed:
+		awaiting_bed = true
+		slot_options.clear()
+		outcome_label.text = "All tasks for today are resolved. Report to Crew Quarters, aim at a bed, and press E to sleep."
+		_set_board_open(true)
+		_refresh_board()
+		return
+	awaiting_bed = false
 	if garden_checked_today:
 		garden_neglect_days = 0
 		garden_failure_pending = false

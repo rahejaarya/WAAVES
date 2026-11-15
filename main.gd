@@ -725,7 +725,11 @@ func _add_sleeping_room_props() -> void:
 	for bunk_x: float in [15.5, 21.5]:
 		for level in range(2):
 			var mattress_y := 0.48 + float(level) * 1.35
-			_make_solid_box("Bunk bed frame", Vector3(bunk_x, mattress_y, -1.1), Vector3(3.0, 0.18, 3.7), Color("#77888b"))
+			var bed_frame := _make_solid_box("Crew bunk bed frame", Vector3(bunk_x, mattress_y, -1.1), Vector3(3.0, 0.18, 3.7), Color("#77888b"))
+			if level == 0:
+				var sleep_panel := _make_solid_box("Crew bunk sleep control", Vector3(bunk_x, 1.35, -3.02), Vector3(1.25, 0.8, 0.16), Color("#27444a"))
+				sleep_panel.set_meta("station_id", "bed")
+				_make_text_panel("SLEEP\nPress E to end shift", Vector3(bunk_x, 1.35, -2.92), Vector2(1.12, 0.62), PI)
 			_make_visual_box("Bunk bed mattress", Vector3(bunk_x, mattress_y + 0.13, -1.1), Vector3(2.78, 0.18, 3.45), Color("#c1ccca"))
 			_make_visual_box("Bunk bed pillow", Vector3(bunk_x, mattress_y + 0.28, -2.38), Vector3(1.3, 0.16, 0.62), Color("#74b8bd"))
 		for post_x: float in [-1.3, 1.3]:
@@ -909,7 +913,10 @@ func _update_station_hover() -> void:
 	var collider: Object = hit["collider"]
 	if collider.has_meta("station_id"):
 		hovered_station = str(collider.get_meta("station_id"))
-		interaction_hint.text = "LUNAR SEISMOMETER  •  PRESS E TO OPEN TASK"
+		if hovered_station == "bed":
+			interaction_hint.text = "CREW BUNK  •  PRESS E TO SLEEP" if campaign_ui.get("awaiting_bed") else "CREW BUNK  •  FINISH TODAY'S TASKS BEFORE SLEEPING"
+		elif hovered_station == "seismometer":
+			interaction_hint.text = "LUNAR SEISMOMETER  •  PRESS E TO OPEN TASK"
 
 
 func _make_label(text: String, label_position: Vector2, font_size: int, color: Color) -> Label:
