@@ -35,8 +35,9 @@ func _process(delta: float) -> void:
 	hud.minimap.current_room_id = room_id
 	_update_hover()
 	_update_task_marker()
-	# Day 3-4: air is leaking until the hole is patched.
-	hud.set_alarm(not campaign.ended and campaign.day in [3, 4] and not campaign.leak_fixed, delta)
+	# The space rock hits the night before Day 3: the leak alarm flashes from then until the
+	# hole is patched (Day 3, 4 or 5), and stops on the game-over / win screen.
+	hud.set_alarm(not campaign.ended and campaign.day >= 3 and not campaign.leak_fixed, delta)
 	# Day 5: moonquake.
 	if campaign.day == 5 and not campaign.ended:
 		shake_time += delta
