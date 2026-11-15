@@ -133,6 +133,17 @@ func _set_board_open(open: bool) -> void:
 	if is_instance_valid(player):
 		player.set_physics_process(not open and not ended)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if open or ended else Input.MOUSE_MODE_CAPTURED
+	if is_instance_valid(modal):
+		if active:
+			modal.anchor_left = 0.24
+			modal.anchor_top = 0.18
+			modal.anchor_right = 0.76
+			modal.anchor_bottom = 0.82
+		else:
+			modal.anchor_left = 0.12
+			modal.anchor_top = 0.06
+			modal.anchor_right = 0.88
+			modal.anchor_bottom = 0.94
 	if open:
 		_refresh_board()
 
@@ -278,10 +289,13 @@ func _build_interface() -> void:
 func _refresh_board() -> void:
 	if not is_instance_valid(modal_title):
 		return
-	modal_title.text = "MISSION CONTROL  /  DAY %d  /  SLOT %d" % [day, slot]
+	modal_title.text = ("TASK INTERFACE  /  DAY %d  /  SLOT %d" if active else "MISSION CONTROL  /  DAY %d  /  SLOT %d") % [day, slot]
 	resource_label.text = "TIME POINTS  %d / %d     RESEARCH AP  %d     SCORE  %d     PENDING NEXT DAY  +%d" % [time_points, MAX_TIME_POINTS, research_points, score, pending_score]
 	event_label.text = "SHIFT COMPLETE  /  Go to Crew Quarters. Look at a bed and press E to sleep and begin the next day." if awaiting_bed else _event_text()
-	choice_list.visible = not manual_panel.visible
+	event_label.visible = not active
+	resource_label.visible = not active
+	choice_list.visible = not manual_panel.visible and not active
+	outcome_label.visible = not active
 	challenge_panel.visible = active
 	skip_button.visible = not manual_panel.visible and not active and not ended
 	manual_button.visible = not active and not ended
@@ -354,7 +368,6 @@ func _start_action(index: int) -> void:
 	_set_board_open(true)
 	_start_minigame()
 	_refresh_board()
-	mission_scroll.ensure_control_visible(challenge_panel)
 
 
 func _start_minigame() -> void:

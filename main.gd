@@ -4,7 +4,7 @@ const MinimapScript := preload("res://minimap.gd")
 const CampaignScript := preload("res://campaign.gd")
 
 const FLOOR_THICKNESS := 0.3
-const WALL_HEIGHT := 3.4
+const WALL_HEIGHT := 4.4
 const WALL_THICKNESS := 0.32
 const DOOR_WIDTH := 2.2
 
@@ -75,7 +75,7 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_E and hovered_station != "" and not campaign_ui.call("is_board_open"):
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_E and hovered_station != "" and not campaign_ui.call("is_board_open"):
 		campaign_ui.call("interact_with_station", hovered_station)
 	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		if is_instance_valid(campaign_ui) and campaign_ui.call("is_board_open"):
@@ -162,7 +162,7 @@ func _build_room_details(room: Dictionary) -> void:
 	var center: Vector2 = room["center"]
 	var size: Vector2 = room["size"]
 	var title := str(room["title"])
-	_make_visual_box(title + " pressure hull ceiling", Vector3(center.x, WALL_HEIGHT + 0.04, center.y), Vector3(size.x, 0.18, size.y), Color("#8e9b99"))
+	_make_box(world_root, title + " pressure hull ceiling", Vector3(center.x, WALL_HEIGHT + 0.04, center.y), Vector3(size.x, 0.18, size.y), Color("#8e9b99"))
 	# Long, recessed ceiling lights create a clean spacecraft interior without heavy effects.
 	for light_x: float in [-size.x * 0.24, size.x * 0.24]:
 		_make_emissive_box(title + " ceiling light", Vector3(center.x + light_x, WALL_HEIGHT - 0.075, center.y), Vector3(0.32, 0.035, size.y * 0.68), Color("#d8ffff"), 0.8)
@@ -308,7 +308,7 @@ func _build_corridor_shell(first: Dictionary, second: Dictionary, center: Vector
 	else:
 		for side: float in [-1.0, 1.0]:
 			_make_box(world_root, "Corridor pressure wall", Vector3(center.x + side * (size.x * 0.5 - WALL_THICKNESS * 0.5), WALL_HEIGHT * 0.5, center.y), Vector3(WALL_THICKNESS, WALL_HEIGHT, size.y + overlap * 2.0), ROOM_WALL_COLOR)
-	_make_visual_box(str(first["title"]) + " corridor ceiling", Vector3(center.x, WALL_HEIGHT + 0.04, center.y), Vector3(size.x + overlap * 2.0, 0.18, size.y + overlap * 2.0), Color("#8e9b99"))
+	_make_box(world_root, str(first["title"]) + " corridor ceiling", Vector3(center.x, WALL_HEIGHT + 0.10, center.y), Vector3(size.x + overlap * 2.0, 0.18, size.y + overlap * 2.0), Color("#8e9b99"))
 	var light_size := Vector3(size.x * 0.52, 0.035, 0.34) if runs_along_x else Vector3(0.34, 0.035, size.y * 0.52)
 	_make_emissive_box("Corridor recessed light", Vector3(center.x, WALL_HEIGHT - 0.08, center.y), light_size, Color("#d9ffff"), 0.65)
 
@@ -490,6 +490,7 @@ func _add_exterior_station(station_name: String, station_id: String, position: V
 func _add_satellite_dish() -> void:
 	var base := _make_box(world_root, "Communications antenna footing", Vector3(-10.0, 0.12, 35.0), Vector3(2.3, 0.24, 2.3), Color("#757e7c"))
 	base.set_meta("station_id", "eva_station")
+	_make_text_panel("COMMUNICATIONS\nAntenna / link check", Vector3(-10.0, 3.25, 33.7), Vector2(3.0, 0.66), 0.0)
 	base.position.y = -0.035
 	var mount := _make_box(world_root, "Antenna azimuth mount", Vector3(-10.0, 0.38, 35.0), Vector3(0.9, 0.34, 0.9), Color("#b8c2bf"))
 	var pedestal := _make_box(world_root, "Antenna mast", Vector3(-10.0, 1.25, 35.0), Vector3(0.22, 1.55, 0.22), Color("#aab5b2"))
@@ -599,6 +600,7 @@ func _add_plant_growth_room_props() -> void:
 					leaf.scale = Vector3(1.0, 0.55, 0.72)
 	var garden_unit := _make_solid_box("Garden nutrient and water service unit", Vector3(0.0, 1.15, -31.45), Vector3(3.2, 2.2, 0.8), Color("#7b8b84"))
 	garden_unit.set_meta("station_id", "garden")
+	_make_text_panel("CROP SERVICE\nNutrients / flow", Vector3(0.0, 2.5, -31.0), Vector2(2.5, 0.56), 0.0)
 	_make_textured_screen("Plant growth monitoring display", Vector3(0.0, 1.52, -31.02), Vector2(1.24, 0.72), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
 
 
@@ -612,6 +614,7 @@ func _add_med_bay_props() -> void:
 		_make_visual_box("Medical privacy curtain", Vector3(-21.3 + side * 1.68, 1.78, -17.0), Vector3(0.055, 1.75, 4.35), Color("#9ab6b4"))
 	var medical_analyzer := _make_solid_box("Specimen diagnostic analyzer", Vector3(-14.2, 0.82, -18.7), Vector3(2.1, 1.64, 1.35), Color("#87999a"))
 	medical_analyzer.set_meta("station_id", "medical")
+	_make_text_panel("MEDICAL BAY\nCrew diagnostics", Vector3(-14.2, 2.05, -18.0), Vector2(2.5, 0.58), 0.0)
 	_make_visual_box("Diagnostic screen bezel", Vector3(-14.2, 1.67, -18.0), Vector3(1.12, 0.84, 0.16), Color("#354850"))
 	_make_textured_screen("Diagnostic lunar specimen scan", Vector3(-14.2, 1.67, -18.085), Vector2(0.94, 0.62), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
 	for shelf_level in range(3):
@@ -666,15 +669,13 @@ func _add_lab_props() -> void:
 	# A central aisle connects both bulkhead doors; bench equipment is visibly lab-specific.
 	_add_seismometer_station()
 	for bench_z: float in [-4.0, 4.0]:
-		var lab_bench := _make_solid_box("Laboratory instrument bench", Vector3(-18.0, 0.92, bench_z), Vector3(7.0, 0.18, 1.5), Color("#7e8e8d"))
+		var lab_bench := _make_solid_box("Laboratory instrument bench", Vector3(-18.0, 0.86, bench_z), Vector3(7.0, 0.22, 1.5), Color("#52666c"))
 		lab_bench.set_meta("station_id", "lab_console")
 		for leg_x: float in [-3.0, 3.0]:
-			_make_solid_box("Bench pedestal", Vector3(-18.0 + leg_x, 0.45, bench_z), Vector3(0.34, 0.9, 1.25), Color("#66777a"))
-	for microscope_x: float in [-20.0, -16.0]:
-		_make_visual_box("Microscope weighted base", Vector3(microscope_x, 1.08, -3.8), Vector3(0.85, 0.12, 0.62), Color("#c6d0cc"))
-		_make_visual_strut("Microscope angled arm", Vector3(microscope_x, 1.12, -3.8), Vector3(microscope_x, 1.85, -3.55), 0.09, Color("#aebcb8"))
-		_make_visual_cylinder("Microscope eyepiece tube", Vector3(microscope_x, 1.92, -3.47), 0.1, 0.42, Color("#4f6872"))
-		_make_visual_box("Microscope stage", Vector3(microscope_x, 1.34, -3.68), Vector3(0.52, 0.09, 0.42), Color("#7f9290"))
+			_make_solid_box("Bench pedestal", Vector3(-18.0 + leg_x, 0.43, bench_z), Vector3(0.42, 0.72, 1.22), Color("#354a51"))
+		_make_visual_box("Bench edge safety rail", Vector3(-18.0, 0.99, bench_z + 0.68), Vector3(6.7, 0.055, 0.07), Color("#b0c0bc"))
+		for instrument_x: float in [-20.35, -17.65, -15.0]:
+			_add_lab_instrument(instrument_x, bench_z)
 	for sample_x: float in [-20.8, -19.5, -16.5, -15.2]:
 		_make_visual_cylinder("Sealed lunar dust sample canister", Vector3(sample_x, 1.27, 4.0), 0.27, 0.58, Color("#b7b99b"))
 		_make_visual_cylinder("Sample canister locking cap", Vector3(sample_x, 1.59, 4.0), 0.3, 0.1, Color("#667982"))
@@ -683,6 +684,7 @@ func _add_lab_props() -> void:
 	_make_textured_screen("Moonquake waveform display", Vector3(-18.0, 1.12, -0.888), Vector2(0.82, 0.32), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
 	var lab_interaction := _make_solid_box("Laboratory task terminal", Vector3(-18.0, 1.7, -5.78), Vector3(2.5, 1.4, 0.16), Color("#243b42"))
 	lab_interaction.set_meta("station_id", "lab_console")
+	_make_text_panel("LAB WORKSTATION\nSamples / instruments", Vector3(-18.0, 2.65, -5.55), Vector2(3.2, 0.62), 0.0)
 	for model_path: String in ["res://assets/nasa/habitat-demonstration-unit-part-1.glb", "res://assets/nasa/habitat-demonstration-unit-part-2.glb"]:
 		var habitat_scene := load(model_path) as PackedScene
 		if habitat_scene != null:
@@ -696,19 +698,37 @@ func _add_lab_props() -> void:
 	for case_index in range(4):
 		var case_x := -20.5 + float(case_index % 2) * 4.8
 		var case_z := 2.9 + float(case_index / 2) * 2.0
-		_make_solid_box("Instrument storage case", Vector3(case_x, 1.24, case_z), Vector3(1.1, 0.46, 0.75), Color("#849392"))
+		var case_body := _make_solid_box("Instrument storage case", Vector3(case_x, 1.18, case_z), Vector3(1.1, 0.38, 0.75), Color("#536d73"))
+		case_body.rotation_degrees.z = 0.0
+		_make_visual_box("Instrument case lid", Vector3(case_x, 1.4, case_z), Vector3(1.12, 0.08, 0.77), Color("#819692"))
+		_make_visual_box("Instrument case ID plate", Vector3(case_x, 1.2, case_z - 0.39), Vector3(0.52, 0.16, 0.025), Color("#d3c27d"))
+
+
+func _add_lab_instrument(x: float, z: float) -> void:
+	# Repeated machined instrument modules give the lab a consistent hardware language.
+	var base := Vector3(x, 1.13, z)
+	_make_visual_box("Optical instrument foot", base, Vector3(0.92, 0.22, 0.72), Color("#92a29e"))
+	_make_visual_box("Instrument dark isolation pad", base + Vector3(0.0, 0.13, 0.0), Vector3(0.74, 0.035, 0.56), Color("#263c43"))
+	_make_visual_box("Lunar sample stage", base + Vector3(0.0, 0.25, 0.02), Vector3(0.46, 0.08, 0.42), Color("#b0b9b1"))
+	_make_visual_cylinder("Optical objective barrel", base + Vector3(0.0, 0.55, -0.12), 0.13, 0.48, Color("#536b73"))
+	_make_visual_cylinder("Objective locking ring", base + Vector3(0.0, 0.72, -0.12), 0.17, 0.075, Color("#c3a95e"))
+	_make_visual_strut("Microscope support arm", base + Vector3(0.0, 0.24, 0.25), base + Vector3(0.0, 0.84, 0.25), 0.065, Color("#aebbb5"))
+	_make_visual_box("Instrument control fascia", base + Vector3(0.34, 0.47, 0.22), Vector3(0.24, 0.34, 0.12), Color("#354c54"))
+	_make_emissive_box("Instrument status display", base + Vector3(0.34, 0.52, 0.15), Vector3(0.16, 0.11, 0.025), Color("#60d4cf"), 0.38)
+	for button_x: float in [-0.12, 0.0, 0.12]:
+		_make_visual_cylinder("Instrument tactile key", base + Vector3(0.34 + button_x, 0.34, 0.14), 0.035, 0.035, Color("#d9bd70"))
 
 
 func _add_seismometer_station() -> void:
 	# A visible lunar seismometer makes seismic tasks discoverable in the Lab.
-	_make_solid_box("Lunar seismometer isolation plinth", Vector3(-18.0, 0.22, -1.15), Vector3(1.65, 0.38, 1.4), Color("#46585b"))
-	var sensor := _make_solid_box("Lunar seismometer sensor housing", Vector3(-18.0, 0.9, -1.15), Vector3(1.08, 1.4, 0.92), Color("#c0c9c2"))
+	_make_solid_box("Lunar seismometer isolation plinth", Vector3(-22.0, 0.22, -1.15), Vector3(1.65, 0.38, 1.4), Color("#46585b"))
+	var sensor := _make_solid_box("Lunar seismometer sensor housing", Vector3(-22.0, 0.9, -1.15), Vector3(1.08, 1.4, 0.92), Color("#c0c9c2"))
 	sensor.set_meta("station_id", "seismometer")
-	_make_visual_cylinder("Seismometer leveling collar", Vector3(-18.0, 1.02, -1.15), 0.36, 0.12, Color("#697c7d"))
-	_make_visual_cylinder("Seismometer sensor cap", Vector3(-18.0, 1.14, -1.15), 0.23, 0.18, Color("#9ab2ad"))
-	_make_text_panel("LUNAR SEISMOMETER\nWaveform / calibration", Vector3(-18.0, 1.65, -1.15), Vector2(1.8, 0.48), PI)
-	_make_text_panel("SEISMOMETER\nUse: Day 1 calibration, Day 3 impact location, Day 5 moonquake recording", Vector3(-18.0, 2.25, -5.72), Vector2(4.2, 0.72), 0.0)
-	_make_textured_screen("Seismometer waveform instrument display", Vector3(-18.0, 1.72, -5.83), Vector2(2.0, 1.0), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
+	_make_visual_cylinder("Seismometer leveling collar", Vector3(-22.0, 1.02, -1.15), 0.36, 0.12, Color("#697c7d"))
+	_make_visual_cylinder("Seismometer sensor cap", Vector3(-22.0, 1.14, -1.15), 0.23, 0.18, Color("#9ab2ad"))
+	_make_text_panel("LUNAR SEISMOMETER\nWaveform / calibration", Vector3(-22.0, 1.65, -1.15), Vector2(1.8, 0.48), 0.0)
+	_make_text_panel("SEISMOMETER\nDay 1 calibration / Day 3 impact / Day 5 quake", Vector3(-22.0, 2.25, -5.72), Vector2(4.2, 0.72), 0.0)
+	_make_textured_screen("Seismometer waveform instrument display", Vector3(-22.0, 1.72, -5.83), Vector2(2.0, 1.0), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
 
 
 func _make_text_panel(panel_text: String, panel_position: Vector3, panel_size: Vector2, rotation_y: float) -> void:
@@ -743,22 +763,32 @@ func _add_main_room_props() -> void:
 		_make_visual_box("Compute unit status lights", Vector3(console_x + 1.22, 1.43, console_z - 0.554), Vector3(0.22, 0.07, 0.025), Color("#6acbc4"))
 	var life_support := _make_solid_box("Main room life support cabinet", Vector3(6.55, 1.15, 2.8), Vector3(1.65, 2.3, 1.4), Color("#6e8386"))
 	life_support.set_meta("station_id", "life_support")
+	_make_text_panel("LIFE SUPPORT\nWater / O₂ / CO₂", Vector3(6.55, 2.65, 2.0), Vector2(2.7, 0.6), 0.0)
 	_make_emissive_box("Air filter status screen", Vector3(5.7, 1.55, 2.8), Vector3(0.04, 0.58, 0.76), Color("#63d5dc"), 0.4)
 	for vent_row in range(4):
 		_make_visual_box("Air filter vent", Vector3(5.68, 0.72 + float(vent_row) * 0.19, 2.8), Vector3(0.045, 0.045, 0.82), Color("#263b43"))
 
 
 func _add_sleeping_room_props() -> void:
-	for bunk_x: float in [15.5, 21.5]:
+	# Keep a clear west-side lane from the crew-quarters hatch to the main hall.
+	for bunk_x: float in [17.5, 22.0]:
 		for level in range(2):
 			var mattress_y := 0.48 + float(level) * 1.35
-			var bed_frame := _make_solid_box("Crew bunk bed frame", Vector3(bunk_x, mattress_y, -1.1), Vector3(3.0, 0.18, 3.7), Color("#77888b"))
+			var bed_frame := _make_solid_box("Crew bunk bed frame", Vector3(bunk_x, mattress_y, -1.1), Vector3(3.0, 0.24, 3.7), Color("#465b62"))
+			_make_visual_box("Bunk frame inset", Vector3(bunk_x, mattress_y + 0.14, -1.1), Vector3(2.76, 0.055, 3.45), Color("#8fa09c"))
+			for rail_x: float in [-1.42, 1.42]:
+				_make_visual_box("Bunk safety rail", Vector3(bunk_x + rail_x, mattress_y + 0.34, -1.05), Vector3(0.08, 0.46, 3.28), Color("#a8b6b0"))
+			for strap_z: float in [-2.12, -0.1, 1.65]:
+				_make_visual_box("Bunk restraint strap", Vector3(bunk_x, mattress_y + 0.42, strap_z), Vector3(2.64, 0.055, 0.11), Color("#d0a75d"))
 			if level == 0:
 				var sleep_panel := _make_solid_box("Crew bunk sleep control", Vector3(bunk_x, 1.35, -3.02), Vector3(1.25, 0.8, 0.16), Color("#27444a"))
 				sleep_panel.set_meta("station_id", "bed")
-				_make_text_panel("SLEEP\nPress E to end shift", Vector3(bunk_x, 1.35, -2.92), Vector2(1.12, 0.62), PI)
-			_make_visual_box("Bunk bed mattress", Vector3(bunk_x, mattress_y + 0.13, -1.1), Vector3(2.78, 0.18, 3.45), Color("#c1ccca"))
-			_make_visual_box("Bunk bed pillow", Vector3(bunk_x, mattress_y + 0.28, -2.38), Vector3(1.3, 0.16, 0.62), Color("#74b8bd"))
+				_make_text_panel("SLEEP\nPress E to end shift", Vector3(bunk_x, 1.35, -2.92), Vector2(1.12, 0.62), 0.0)
+			var mattress := _make_capsule_visual("Pressure-restraint bunk mattress", Vector3(bunk_x, mattress_y + 0.32, -1.1), Vector3(1.35, 0.18, 1.7), Color("#d0d8d0"))
+			mattress.rotation.x = PI * 0.5
+			var pillow := _make_capsule_visual("Crew bunk head pillow", Vector3(bunk_x, mattress_y + 0.42, -2.38), Vector3(0.56, 0.12, 0.30), Color("#71b9bd"))
+			pillow.rotation.x = PI * 0.5
+			_make_emissive_box("Bunk reading light", Vector3(bunk_x, mattress_y + 0.92, -2.92), Vector3(0.62, 0.055, 0.12), Color("#d8f7dd"), 0.28)
 		for post_x: float in [-1.3, 1.3]:
 			_make_visual_box("Bunk bed post", Vector3(bunk_x + post_x, 1.35, -1.1), Vector3(0.12, 2.7, 0.12), Color("#91a09e"))
 	for shelf_level in range(3):
@@ -776,6 +806,7 @@ func _add_airlock_props() -> void:
 		_make_visual_box("Airlock outer sliding door", Vector3(side * 1.48, 1.35, 16.72), Vector3(1.25, 2.45, 0.18), Color("#566d75"))
 	var filter_station := _make_solid_box("Airlock filter service panel", Vector3(3.0, 1.5, 13.0), Vector3(0.28, 2.3, 0.9), Color("#657e84"))
 	filter_station.set_meta("station_id", "airlock_filter")
+	_make_text_panel("AIRLOCK FILTERS\nInspect / clean", Vector3(3.0, 2.75, 12.45), Vector2(2.6, 0.58), 0.0)
 	_make_visual_box("Airlock control lights", Vector3(2.83, 1.85, 13.0), Vector3(0.06, 0.62, 0.48), Color("#72d7bf"))
 
 
@@ -933,18 +964,31 @@ func _update_station_hover() -> void:
 	if campaign_ui.call("is_board_open") or follow_camera == null:
 		return
 	var origin := follow_camera.global_position
-	var query := PhysicsRayQueryParameters3D.create(origin, origin - follow_camera.global_transform.basis.z * 3.0)
-	query.exclude = [player]
-	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	if hit.is_empty():
-		return
-	var collider: Object = hit["collider"]
-	if collider.has_meta("station_id"):
-		hovered_station = str(collider.get_meta("station_id"))
+	var ray_direction := -follow_camera.global_transform.basis.z
+	var exclude: Array[RID] = [player.get_rid()]
+	for _attempt in range(10):
+		var query := PhysicsRayQueryParameters3D.create(origin, origin + ray_direction * 4.5)
+		query.exclude = exclude
+		var hit := get_world_3d().direct_space_state.intersect_ray(query)
+		if hit.is_empty():
+			break
+		var collider: Object = hit["collider"]
+		if collider.has_meta("station_id"):
+			hovered_station = str(collider.get_meta("station_id"))
+			break
+		# Only step through nearby trim or small control geometry. A wall or
+		# large piece of equipment must still block interaction through it.
+		if float(hit["position"].distance_to(origin)) > 0.85:
+			break
+		if collider is CollisionObject3D:
+			exclude.append(collider.get_rid())
+		else:
+			break
+	if hovered_station != "":
 		if hovered_station == "bed":
 			interaction_hint.text = "CREW BUNK  •  PRESS E TO SLEEP" if campaign_ui.get("awaiting_bed") else "CREW BUNK  •  FINISH TODAY'S TASKS BEFORE SLEEPING"
 		else:
-			interaction_hint.text = "%s  •  PRESS E TO OPEN TASK" % hovered_station.replace("_", " ").to_upper()
+			interaction_hint.text = "%s  •  PRESS E TO START TASK" % hovered_station.replace("_", " ").to_upper()
 
 
 func _make_label(text: String, label_position: Vector2, font_size: int, color: Color) -> Label:
