@@ -586,10 +586,16 @@ func _add_room_photo_panels() -> void:
 func _add_plant_growth_room_props() -> void:
 	# Veggie-inspired controlled environment racks with plant pillows and overhead LEDs.
 	for rack_x: float in [-3.25, 3.25]:
-		_make_solid_box("Plant growth rack cabinet", Vector3(rack_x, 1.45, -28.0), Vector3(3.1, 2.8, 0.82), Color("#526b70"))
+		# Open rack frame leaves the trays and plants visible from the aisle.
+		for frame_x: float in [-1.48, 1.48]:
+			_make_visual_strut("Hydroponic rack upright", Vector3(rack_x + frame_x, 0.2, -28.0), Vector3(rack_x + frame_x, 2.92, -28.0), 0.065, Color("#9aa9a2"))
+		for frame_z: float in [-0.4, 0.4]:
+			_make_visual_strut("Hydroponic rack cross brace", Vector3(rack_x - 1.48, 0.35, -28.0 + frame_z), Vector3(rack_x + 1.48, 2.8, -28.0 + frame_z), 0.035, Color("#65797a"))
 		for shelf: int in range(3):
 			var shelf_y := 0.72 + float(shelf) * 0.78
 			_make_solid_box("Hydroponic grow tray", Vector3(rack_x, shelf_y, -27.65), Vector3(2.55, 0.18, 0.56), Color("#384b43"))
+			_make_visual_box("Tray stainless rim", Vector3(rack_x, shelf_y + 0.11, -27.65), Vector3(2.58, 0.035, 0.59), Color("#aab9ad"))
+			_make_visual_strut("Nutrient feed tube", Vector3(rack_x - 1.25, shelf_y + 0.18, -27.25), Vector3(rack_x + 1.25, shelf_y + 0.18, -27.25), 0.035, Color("#53bcae"))
 			_make_emissive_box("Plant growth LED bank", Vector3(rack_x, shelf_y + 0.52, -27.65), Vector3(2.3, 0.055, 0.24), Color("#e7a2d9"), 0.24)
 			for plant: int in range(4):
 				var plant_x := rack_x - 0.9 + float(plant) * 0.6
@@ -601,20 +607,36 @@ func _add_plant_growth_room_props() -> void:
 	var garden_unit := _make_solid_box("Garden nutrient and water service unit", Vector3(0.0, 1.15, -31.45), Vector3(3.2, 2.2, 0.8), Color("#7b8b84"))
 	garden_unit.set_meta("station_id", "garden")
 	_make_text_panel("CROP SERVICE\nNutrients / flow", Vector3(0.0, 2.5, -31.0), Vector2(2.5, 0.56), 0.0)
+	_add_status_panel_face(Vector3(0.0, 1.48, -31.0), 1.05, 0.56)
+	for gauge_x: float in [-1.15, 1.15]:
+		_add_gauge(Vector3(gauge_x, 1.48, -31.0), 0.16, Color("#74d6bf"))
+	for hose_x: float in [-0.85, 0.85]:
+		_make_visual_strut("Garden nutrient service hose", Vector3(hose_x, 0.36, -31.38), Vector3(hose_x, 0.36, -30.72), 0.055, Color("#48aa91"))
 	_make_textured_screen("Plant growth monitoring display", Vector3(0.0, 1.52, -31.02), Vector2(1.24, 0.72), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
 
 
 func _add_med_bay_props() -> void:
 	# NASA's reference layout calls for one stowable medical stretcher with a private exam area.
-	_make_solid_box("Stowable medical stretcher frame", Vector3(-21.3, 0.37, -17.0), Vector3(2.25, 0.48, 3.25), Color("#aab8bb"))
-	_make_visual_box("Medical stretcher mattress", Vector3(-21.3, 0.65, -17.0), Vector3(2.12, 0.14, 3.1), Color("#d2dcda"))
-	_make_visual_box("Medical stretcher pillow", Vector3(-21.3, 0.8, -18.17), Vector3(1.42, 0.18, 0.68), Color("#71b8c0"))
+	_make_solid_box("Medical stretcher frame", Vector3(-21.3, 0.4, -17.0), Vector3(2.15, 0.24, 3.1), Color("#52676e"))
+	var stretcher_pad := _make_capsule_visual("Medical pressure mattress", Vector3(-21.3, 0.69, -17.0), Vector3(1.0, 0.13, 1.55), Color("#d2dcda"))
+	stretcher_pad.rotation.x = PI * 0.5
+	var stretcher_pillow := _make_capsule_visual("Medical head cushion", Vector3(-21.3, 0.84, -18.18), Vector3(0.66, 0.11, 0.3), Color("#71b8c0"))
+	stretcher_pillow.rotation.x = PI * 0.5
+	for leg_x: float in [-0.88, 0.88]:
+		for leg_z: float in [-1.22, 1.22]:
+			_make_visual_strut("Stretcher telescoping leg", Vector3(-21.3 + leg_x, 0.32, -17.0 + leg_z), Vector3(-21.3 + leg_x, 0.08, -17.0 + leg_z), 0.06, Color("#9aa9a7"))
+			_make_visual_cylinder("Stretcher caster", Vector3(-21.3 + leg_x, 0.1, -17.0 + leg_z), 0.11, 0.08, Color("#263b43"))
+	for restraint_z: float in [-18.0, -16.0]:
+		_make_visual_box("Medical restraint webbing", Vector3(-21.3, 0.84, restraint_z), Vector3(1.95, 0.045, 0.1), Color("#c7a45e"))
 	_make_visual_box("Medical privacy screen rail", Vector3(-21.3, 2.65, -17.0), Vector3(3.5, 0.08, 4.6), Color("#8c9b99"))
 	for side: float in [-1.0, 1.0]:
 		_make_visual_box("Medical privacy curtain", Vector3(-21.3 + side * 1.68, 1.78, -17.0), Vector3(0.055, 1.75, 4.35), Color("#9ab6b4"))
 	var medical_analyzer := _make_solid_box("Specimen diagnostic analyzer", Vector3(-14.2, 0.82, -18.7), Vector3(2.1, 1.64, 1.35), Color("#87999a"))
 	medical_analyzer.set_meta("station_id", "medical")
 	_make_text_panel("MEDICAL BAY\nCrew diagnostics", Vector3(-14.2, 2.05, -18.0), Vector2(2.5, 0.58), 0.0)
+	_add_status_panel_face(Vector3(-14.2, 1.28, -17.98), 1.52, 0.72)
+	for button_x: float in [-0.54, -0.18, 0.18, 0.54]:
+		_make_visual_cylinder("Analyzer tactile control", Vector3(-14.2 + button_x, 0.92, -17.99), 0.075, 0.05, Color("#d5b86e"))
 	_make_visual_box("Diagnostic screen bezel", Vector3(-14.2, 1.67, -18.0), Vector3(1.12, 0.84, 0.16), Color("#354850"))
 	_make_textured_screen("Diagnostic lunar specimen scan", Vector3(-14.2, 1.67, -18.085), Vector2(0.94, 0.62), "res://assets/nasa/moon_surface/lro_lunar_color_mosaic.jpg", true)
 	for shelf_level in range(3):
