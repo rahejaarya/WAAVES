@@ -907,7 +907,7 @@ func _add_sleeping_room_props() -> void:
 	for bunk_x: float in [17.5, 22.0]:
 		for level in range(2):
 			var mattress_y := 0.48 + float(level) * 1.35
-				_make_solid_box("Crew bunk bed frame", Vector3(bunk_x, mattress_y, -1.1), Vector3(3.0, 0.24, 3.7), Color("#465b62"))
+			_make_solid_box("Crew bunk bed frame", Vector3(bunk_x, mattress_y, -1.1), Vector3(3.0, 0.24, 3.7), Color("#465b62"))
 			_make_visual_box("Bunk frame inset", Vector3(bunk_x, mattress_y + 0.14, -1.1), Vector3(2.76, 0.055, 3.45), Color("#8fa09c"))
 			for rail_x: float in [-1.42, 1.42]:
 				_make_visual_box("Bunk safety rail", Vector3(bunk_x + rail_x, mattress_y + 0.34, -1.05), Vector3(0.08, 0.46, 3.28), Color("#a8b6b0"))
