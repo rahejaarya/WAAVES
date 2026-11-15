@@ -29,6 +29,7 @@ var slot_options: Array[Dictionary] = []
 var completed_slot_actions: Array[String] = []
 var action_history: Array[String] = []
 var current_action: Dictionary = {}
+var pinned_action_id := ""
 var active := false
 var ended := false
 var final_status := ""
@@ -37,6 +38,7 @@ var progress := 0
 var target_progress := 0
 var target_cells: Array[int] = []
 var dial_target := 0
+var math_target := 0
 var expected_sequence: Array[int] = []
 var selected_sequence: Array[int] = []
 var random_source := RandomNumberGenerator.new()
@@ -75,7 +77,8 @@ func _process(_delta: float) -> void:
 		status_label.text = "DAY %d  •  SHIFT %d OF 2  •  TASK TIME %d / %d  •  SCORE %d  •  RESEARCH AP %d" % [day, slot, time_points, MAX_TIME_POINTS, score, research_points]
 		if not active and not ended:
 			var place: String = get_parent().call("_room_title", get_parent().call("_room_id_at_player"))
-			banner_label.text = "CURRENT AREA: %s   •   TAB: OPEN TASKS" % place
+			var pinned: String = get_pinned_task_title()
+			banner_label.text = ("TASK PINNED: %s  •  FIND THE STATION AND PRESS E" % pinned) if pinned != "" else "CURRENT AREA: %s   •   TAB: OPEN TASKS" % place
 			deadline_label.text = _deadline_text()
 		elif ended:
 			banner_label.text = "CREW STATUS: DECEASED" if final_status.begins_with("CREW DECEASED") else "CREW STATUS: SAFE"
@@ -95,6 +98,13 @@ func is_board_open() -> bool:
 	return bool(board.visible)
 
 
+func get_pinned_task_title() -> String:
+	for action: Dictionary in slot_options:
+		if str(action["id"]) == pinned_action_id:
+			return str(action["title"])
+	return ""
+
+
 func toggle_board() -> void:
 	if ended:
 		return
@@ -111,7 +121,8 @@ func interact_with_station(station_id: String) -> void:
 		_advance_to_next_day()
 		return
 	for index in range(slot_options.size()):
-		if str(slot_options[index].get("station", "")) == station_id:
+		if str(slot_options[index].get("station", "")) == station_id and (pinned_action_id == "" or str(slot_options[index]["id"]) == pinned_action_id):
+			pinned_action_id = ""
 			_start_action(index)
 			return
 	outcome_label.text = "No active task for this station in the current shift. Open Mission Control with TAB to review tasks."
@@ -298,7 +309,7 @@ func _rebuild_choices() -> void:
 			continue
 		var button := Button.new()
 		var reward_text := _reward_summary(action)
-		button.text = "%s   %s\n%s\nSTART TASK  •  %d TP (clean: %d)  •  %s%s" % [str(action["code"]), str(action["title"]), str(action["brief"]), int(action["tp"]), ceili(float(action["tp"]) * 0.5), str(action["location"]).to_upper(), ("  •  " + reward_text if reward_text != "" else "")]
+		button.text = "%s   %s\n%s\nPIN TASK  •  GO TO %s AND PRESS E  •  %d TP%s" % [str(action["code"]), str(action["title"]), str(action["brief"]), str(action["station"]).replace("_", " ").to_upper(), int(action["tp"]), ("  •  " + reward_text if reward_text != "" else "")]
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		button.custom_minimum_size = Vector2(0, 82)
@@ -320,7 +331,11 @@ func _toggle_manual() -> void:
 func _choose_action(index: int) -> void:
 	if ended or active or index < 0 or index >= slot_options.size():
 		return
-	_start_action(index)
+	var action: Dictionary = slot_options[index]
+	pinned_action_id = str(action["id"])
+	var station := str(action.get("station", ""))
+	outcome_label.text = "TASK PINNED  /  Go to the %s station, aim at its equipment, and press E to begin." % station.replace("_", " ").to_upper()
+	_set_board_open(false)
 
 
 func _start_action(index: int) -> void:
@@ -370,7 +385,30 @@ func _start_minigame() -> void:
 			tile.pressed.connect(_press_grid_cell.bind(cell_index, tile))
 			grid.add_child(tile)
 		challenge_progress.text = "Correct readings remaining: 3"
-	elif kind == "dial":
+	elif kind in ["dial", "math"]:
+		var answer := SpinBox.new()
+		answer.min_value = 0
+		answer.max_value = 200
+		answer.step = 1
+		answer.custom_minimum_size.x = 180
+		if kind == "math":
+			var left := random_source.randi_range(12, 48)
+			var right := random_source.randi_range(3, 12)
+			math_target = left + right
+			challenge_instructions.text += "\nSolve the calibration check: %d + %d = ?" % [left, right]
+		else:
+			dial_target = random_source.randi_range(24, 76)
+			answer.max_value = 99
+			challenge_instructions.text += "\nSet the instrument dial to %d and verify the calibration." % dial_target
+		var row := HBoxContainer.new()
+		challenge_area.add_child(row)
+		row.add_child(answer)
+		var verify := Button.new()
+		verify.text = "Submit answer" if kind == "math" else "Verify reading"
+		verify.pressed.connect(_verify_math.bind(answer) if kind == "math" else _verify_dial.bind(answer))
+		row.add_child(verify)
+		challenge_progress.text = "Use the live reading; one incorrect submission costs time."
+	elif kind == "dial_legacy":
 		dial_target = random_source.randi_range(24, 76)
 		challenge_instructions.text += "\nSet the instrument dial to %d and verify the calibration." % dial_target
 		var row := HBoxContainer.new()
@@ -386,6 +424,25 @@ func _start_minigame() -> void:
 		verify.pressed.connect(_verify_dial.bind(dial))
 		row.add_child(verify)
 		challenge_progress.text = "Calibration tolerance: ±2 units"
+	elif kind == "pattern":
+		var colors: Array[String] = ["RED", "BLUE", "GREEN", "GOLD"]
+		expected_sequence.clear()
+		for _step in range(5):
+			expected_sequence.append(random_source.randi_range(0, colors.size() - 1))
+		var reference := Label.new()
+		var sequence_text := " → ".join(expected_sequence.map(func(value: int) -> String: return colors[value]))
+		reference.text = "REFERENCE SIGNAL\n" + sequence_text
+		reference.add_theme_font_size_override("font_size", 20)
+		challenge_area.add_child(reference)
+		challenge_instructions.text += "\nRepeat the recorded color sequence on the four calibration keys."
+		for color_index in range(colors.size()):
+			var key := Button.new()
+			key.text = colors[color_index]
+			key.custom_minimum_size = Vector2(0, 52)
+			key.add_theme_color_override("font_color", [Color("#ff7777"), Color("#72bfff"), Color("#77df9a"), Color("#ffd56a")][color_index])
+			key.pressed.connect(_press_sequence.bind(color_index, key))
+			challenge_area.add_child(key)
+		challenge_progress.text = "Correct keys: 0 / 5"
 	elif kind == "bandage":
 		expected_sequence = [0, 2, 1, 3]
 		target_progress = expected_sequence.size()
@@ -441,6 +498,14 @@ func _verify_dial(dial: SpinBox) -> void:
 		challenge_progress.text = "Reading outside tolerance. Adjust the dial and retry. Errors: %d" % mistakes
 
 
+func _verify_math(answer: SpinBox) -> void:
+	if int(answer.value) == math_target:
+		_finish_minigame()
+	else:
+		mistakes += 1
+		challenge_progress.text = "Incorrect calculation. Recheck the two sensor values. Errors: %d" % mistakes
+
+
 func _press_sequence(index: int, button: Button) -> void:
 	var next_index := selected_sequence.size()
 	if next_index < expected_sequence.size() and expected_sequence[next_index] == index:
@@ -476,6 +541,7 @@ func _finish_minigame() -> void:
 	var action_id := str(current_action["id"])
 	_resolve_action(current_action)
 	_award_action_points(current_action)
+	pinned_action_id = ""
 	action_history.append("%s — %s" % [str(current_action["code"]), str(current_action["title"])])
 	if str(current_action["category"]) == "power":
 		power_actions_picked += 1
@@ -707,7 +773,7 @@ func _build_slot_options() -> Array[Dictionary]:
 		options = [
 			_make_action("soil_composition", "Analyze soil composition", "Separate a small regolith aliquot and log its visible mineral fractions.", 10, 6, "now", "sample", "lab", "Select three mineral-bearing areas in the sample image; record the result as a composition screen, not a resource guarantee."),
 			seismic_option,
-			_make_action("magnetometer", "Calibrate the magnetometer", "Take a quiet baseline, then record the local magnetic field. Lunar crustal anomalies are localized.", 10, 5, "now", "dial", "lab", "Tune to the calibration reference, then record the field without moving the sensor.")
+			_make_action("magnetometer", "Calibrate the magnetometer", "Take a quiet baseline, then record the local magnetic field. Lunar crustal anomalies are localized.", 10, 5, "now", "pattern", "lab", "Tune to the calibration reference, then record the field without moving the sensor.")
 		]
 	elif day == 2 and slot == 1:
 		options.append(_filter_action())
@@ -784,9 +850,9 @@ func _daily_action_pool() -> Array[Dictionary]:
 		_make_action("radiation_sensor", "Deploy a surface radiation sensor", "Place the dosimeter away from the habitat and record a background interval.", 10, 5, "next", "dial", "outside", "Set the measurement interval and verify the sensor baseline before logging."),
 		_make_action("collect_rock", "Collect and seal a lunar rock sample", "Record location and sample ID, seal the container, and bring it to the laboratory for composition screening.", 10, 7, "now", "sample", "outside", "Select the three candidate mineral-bearing areas and log the sample location. This adds 10 research AP."),
 		_make_action("thermal_check", "Inspect habitat thermal telemetry", "Compare internal and external temperature readings across the insulation boundary; identify an abnormal gradient.", 10, 6, "now", "scan", "outside", "Compare the three thermal sensor pairs and flag the location with the largest unexplained gradient."),
-		_make_action("solar_calibration", "Calibrate the solar array", "Check array pointing, output current, and dust-related power loss before changing the power budget.", 10, 7, "next", "dial", "outside", "Match the array output reference and verify the current reading after calibration.", "power"),
+		_make_action("solar_calibration", "Calibrate the solar array", "Check array pointing, output current, and dust-related power loss before changing the power budget.", 10, 7, "next", "math", "outside", "Match the array output reference and verify the current reading after calibration.", "power"),
 		_make_action("backup_oxygen", "Test the emergency oxygen supply", "Verify reserve pressure, regulator response, and the isolation valve without venting the reserve.", 10, 5, "now", "valves", "main", "Check regulator, isolation, and reserve status in the safe sequence.", "power"),
-		_make_action("antenna_check", "Inspect the communications antenna", "Check pointing, connector condition, and link quality; do not transmit during an unverified power fault.", 10, 6, "next", "dial", "outside", "Tune the antenna to the recorded ground-station frequency and verify the link indicator."),
+		_make_action("antenna_check", "Inspect the communications antenna", "Check pointing, connector condition, and link quality; do not transmit during an unverified power fault.", 10, 6, "next", "math", "outside", "Tune the antenna to the recorded ground-station frequency and verify the link indicator."),
 		_make_action("environment_station", "Deploy a lunar surface environment station", "Log surface temperature, radiation, and dust exposure. The Moon has no Earth-like weather to forecast.", 10, 8, "now", "inspect", "outside", "Confirm the temperature, radiation, and dust channels are active before recording the site."),
 		_make_action("water_storage", "Check the water storage tanks", "Inspect tank level, leak status, and conductivity-qualified potable-water supply.", 10, 7, "now", "inspect", "main", "Check tank level, line pressure, and water-quality status. Skipping this on Day 2 costs 1 point on Day 3.", "power"),
 		_make_action("collect_dust", "Collect a sealed regolith aliquot", "Collect a small surface sample with a logged location and keep it sealed for laboratory grain-size analysis.", 10, 0, "now", "sample", "outside", "Select the three marked regolith areas, label the aliquot, and log its collection site. Adds 10 research AP."),
@@ -832,7 +898,7 @@ func _make_action(id: String, title: String, brief: String, tp: int, points: int
 		result_text = "The crew is inside the shielded core before peak exposure."
 	elif id == "water_recovery":
 		result_text = "Recovery-loop restriction is corrected and the verification sequence passed."
-	var station := "seismometer" if id in ["seismometer_bump", "rerun_seismometer", "seismo_leak", "quake_seismometer"] else ""
+	var station := "seismometer" if id in ["seismometer_bump", "rerun_seismometer", "seismo_leak", "quake_seismometer"] else "airlock_filter" if location == "airlock" else "medical" if location == "med" else "garden" if location == "garden" else "lab_console" if location == "lab" else "life_support" if location == "main" else "eva_station"
 	return {"id": id, "title": title, "brief": brief, "tp": tp, "points": points, "when": when, "game": game, "location": location, "challenge": challenge, "category": category, "result": result_text, "station": station}
 
 
