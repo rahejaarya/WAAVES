@@ -69,7 +69,8 @@ func _ready() -> void:
 	random_source.randomize()
 	_build_interface()
 	_prepare_slot()
-	_set_board_open(true)
+	# Start in the habitat so the player sees the 3D world immediately.
+	_set_board_open(false)
 
 
 func _process(_delta: float) -> void:
@@ -153,6 +154,18 @@ func _build_interface() -> void:
 	root.name = "Campaign Interface"
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var ui_theme := Theme.new()
+	ui_theme.default_font_size = 16
+	ui_theme.set_color("font_color", "Button", Color("#e8f2ef"))
+	ui_theme.set_color("font_hover_color", "Button", Color("#ffffff"))
+	ui_theme.set_color("font_pressed_color", "Button", Color("#baf9f3"))
+	ui_theme.set_color("font_disabled_color", "Button", Color("#75858a"))
+	ui_theme.set_stylebox("normal", "Button", _panel_style(Color("#20363e"), Color("#48656c")))
+	ui_theme.set_stylebox("hover", "Button", _panel_style(Color("#29474e"), Color("#71ded3")))
+	ui_theme.set_stylebox("pressed", "Button", _panel_style(Color("#14282f"), Color("#83eee2")))
+	ui_theme.set_stylebox("focus", "Button", _panel_style(Color("#29474e"), Color("#baf9f3")))
+	ui_theme.set_stylebox("disabled", "Button", _panel_style(Color("#1a292e"), Color("#35474c")))
+	root.theme = ui_theme
 	add_child(root)
 
 	status_label = Label.new()
@@ -326,8 +339,8 @@ func _rebuild_choices() -> void:
 		button.text = "%s   %s\n%s\nPIN TASK  •  GO TO %s AND PRESS E  •  %d TP%s" % [str(action["code"]), str(action["title"]), str(action["brief"]), str(action["station"]).replace("_", " ").to_upper(), int(action["tp"]), ("  •  " + reward_text if reward_text != "" else "")]
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	button.custom_minimum_size = Vector2(0, 92)
-	button.add_theme_font_size_override("font_size", 15)
+		button.custom_minimum_size = Vector2(0, 92)
+		button.add_theme_font_size_override("font_size", 15)
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.add_theme_stylebox_override("normal", _panel_style(Color("#20363e"), Color("#48656c")))
 		button.add_theme_stylebox_override("hover", _panel_style(Color("#29474e"), Color("#71ded3")))

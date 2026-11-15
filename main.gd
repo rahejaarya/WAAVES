@@ -75,9 +75,7 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_E and hovered_station != "" and not campaign_ui.call("is_board_open"):
-		campaign_ui.call("interact_with_station", hovered_station)
-	elif event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		if is_instance_valid(campaign_ui) and campaign_ui.call("is_board_open"):
 			campaign_ui.call("toggle_board")
 			return
@@ -89,6 +87,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		follow_camera.rotation.x = clampf(follow_camera.rotation.x - event.relative.y * 0.0022, deg_to_rad(-78.0), deg_to_rad(78.0))
 
 
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and (event.keycode == KEY_E or event.physical_keycode == KEY_E):
+		if not is_instance_valid(campaign_ui) or campaign_ui.call("is_board_open"):
+			return
+		_update_station_hover()
+		if hovered_station != "":
+			_animate_hand_action()
+			campaign_ui.call("interact_with_station", hovered_station)
+			get_viewport().set_input_as_handled()
+
+
 func _build_environment() -> void:
 	var world_environment := WorldEnvironment.new()
 	var environment := Environment.new()
@@ -98,6 +107,12 @@ func _build_environment() -> void:
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color("#bbc5ce")
 	environment.ambient_light_energy = 0.28
+	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.ssao_enabled = true
+	environment.ssao_radius = 1.1
+	environment.ssao_intensity = 1.15
+	environment.glow_enabled = true
+	environment.glow_intensity = 0.18
 	world_environment.environment = environment
 	add_child(world_environment)
 
@@ -925,7 +940,91 @@ func _build_camera() -> void:
 	player.add_child(follow_camera)
 	player.get_node("Astronaut").visible = false
 	follow_camera.current = true
+	_build_first_person_hand()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+func _build_first_person_hand() -> void:
+	var rig := Node3D.new()
+	rig.name = "First Person Gloved Hand"
+	rig.position = Vector3(0.42, -0.38, -0.72)
+	rig.rotation_degrees = Vector3(-8.0, -10.0, -28.0)
+	follow_camera.add_child(rig)
+	var sleeve_material := StandardMaterial3D.new()
+	sleeve_material.albedo_color = Color("#c9d2cc")
+	sleeve_material.roughness = 0.88
+	var glove_material := StandardMaterial3D.new()
+	glove_material.albedo_color = Color("#eef0e5")
+	glove_material.roughness = 0.72
+	var cuff_material := StandardMaterial3D.new()
+	cuff_material.albedo_color = Color("#52666d")
+	cuff_material.metallic = 0.22
+	cuff_material.roughness = 0.48
+	_add_hand_capsule(rig, "Suit forearm", Vector3(0.0, -0.16, 0.03), Vector3(0.21, 0.52, 0.21), sleeve_material, Vector3(0.0, 0.0, -0.34))
+	_add_hand_cylinder(rig, "Pressure glove cuff", Vector3(0.0, -0.34, -0.02), 0.19, 0.15, cuff_material)
+	_add_hand_sphere(rig, "Gloved palm", Vector3(0.0, -0.48, -0.10), Vector3(0.22, 0.16, 0.25), glove_material)
+	for finger_index in range(4):
+		var finger_x := -0.135 + float(finger_index) * 0.09
+		_add_hand_capsule(rig, "Gloved finger", Vector3(finger_x, -0.56, -0.27), Vector3(0.052, 0.13, 0.052), glove_material, Vector3(-0.22, 0.0, 0.0))
+	_add_hand_capsule(rig, "Gloved thumb", Vector3(0.20, -0.49, -0.17), Vector3(0.07, 0.15, 0.07), glove_material, Vector3(0.0, 0.0, -0.75))
+	rig.set_meta("rest_position", rig.position)
+	rig.set_meta("rest_rotation", rig.rotation)
+	follow_camera.set_meta("hand_rig", rig)
+
+
+func _add_hand_capsule(parent: Node3D, mesh_name: String, local_position: Vector3, local_scale: Vector3, material: Material, local_rotation: Vector3) -> void:
+	var mesh_instance := MeshInstance3D.new()
+	var capsule := CapsuleMesh.new()
+	capsule.radius = 0.5
+	capsule.height = 1.4
+	mesh_instance.name = mesh_name
+	mesh_instance.mesh = capsule
+	mesh_instance.position = local_position
+	mesh_instance.scale = local_scale
+	mesh_instance.rotation = local_rotation
+	mesh_instance.material_override = material
+	parent.add_child(mesh_instance)
+
+
+func _add_hand_sphere(parent: Node3D, mesh_name: String, local_position: Vector3, local_scale: Vector3, material: Material) -> void:
+	var mesh_instance := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.5
+	sphere.height = 1.0
+	mesh_instance.name = mesh_name
+	mesh_instance.mesh = sphere
+	mesh_instance.position = local_position
+	mesh_instance.scale = local_scale
+	mesh_instance.material_override = material
+	parent.add_child(mesh_instance)
+
+
+func _add_hand_cylinder(parent: Node3D, mesh_name: String, local_position: Vector3, radius: float, height: float, material: Material) -> void:
+	var mesh_instance := MeshInstance3D.new()
+	var cylinder := CylinderMesh.new()
+	cylinder.top_radius = radius * 0.92
+	cylinder.bottom_radius = radius
+	cylinder.height = height
+	mesh_instance.name = mesh_name
+	mesh_instance.mesh = cylinder
+	mesh_instance.position = local_position
+	mesh_instance.rotation.z = -PI * 0.5
+	mesh_instance.material_override = material
+	parent.add_child(mesh_instance)
+
+
+func _animate_hand_action() -> void:
+	if follow_camera == null or not follow_camera.has_meta("hand_rig"):
+		return
+	var rig := follow_camera.get_meta("hand_rig") as Node3D
+	if not is_instance_valid(rig):
+		return
+	var rest_position: Vector3 = rig.get_meta("rest_position")
+	var rest_rotation: Vector3 = rig.get_meta("rest_rotation")
+	var reach := create_tween()
+	reach.tween_property(rig, "position", rest_position + Vector3(-0.15, 0.12, -0.28), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	reach.tween_property(rig, "position", rest_position, 0.24).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	reach.parallel().tween_property(rig, "rotation", rest_rotation, 0.24)
 
 
 func _build_hud() -> void:
@@ -1028,7 +1127,7 @@ func _update_station_hover() -> void:
 	var ray_direction := -follow_camera.global_transform.basis.z
 	var exclude: Array[RID] = [player.get_rid()]
 	for _attempt in range(10):
-		var query := PhysicsRayQueryParameters3D.create(origin, origin + ray_direction * 4.5)
+		var query := PhysicsRayQueryParameters3D.create(origin, origin + ray_direction * 6.0)
 		query.exclude = exclude
 		var hit := get_world_3d().direct_space_state.intersect_ray(query)
 		if hit.is_empty():
@@ -1049,7 +1148,26 @@ func _update_station_hover() -> void:
 		if hovered_station == "bed":
 			interaction_hint.text = "CREW BUNK  •  PRESS E TO SLEEP" if campaign_ui.get("awaiting_bed") else "CREW BUNK  •  FINISH TODAY'S TASKS BEFORE SLEEPING"
 		else:
-			interaction_hint.text = "%s  •  PRESS E TO START TASK" % hovered_station.replace("_", " ").to_upper()
+			interaction_hint.text = "%s  •  PRESS E TO WORK" % _station_display_name(hovered_station)
+
+
+func _station_display_name(station_id: String) -> String:
+	var names := {
+		"seismometer": "LUNAR SEISMOMETER",
+		"airlock_filter": "AIRLOCK FILTERS",
+		"medical": "MEDICAL DIAGNOSTICS",
+		"garden": "CROP SERVICE",
+		"lab_console": "LAB WORKSTATION",
+		"life_support": "LIFE SUPPORT",
+		"neutron_station": "NEUTRON SPECTROMETER",
+		"rover_station": "ROVER BATTERY",
+		"field_station": "SURFACE INSTRUMENTS",
+		"sample_station": "SAMPLE CACHE",
+		"solar_station": "SOLAR ARRAY",
+		"hull_station": "HULL REPAIR KIT",
+		"eva_station": "COMMUNICATIONS ANTENNA"
+	}
+	return str(names.get(station_id, station_id.replace("_", " ").to_upper()))
 
 
 func _make_label(text: String, label_position: Vector2, font_size: int, color: Color) -> Label:
