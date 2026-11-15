@@ -898,8 +898,26 @@ func _make_action(id: String, title: String, brief: String, tp: int, points: int
 		result_text = "The crew is inside the shielded core before peak exposure."
 	elif id == "water_recovery":
 		result_text = "Recovery-loop restriction is corrected and the verification sequence passed."
-	var station := "seismometer" if id in ["seismometer_bump", "rerun_seismometer", "seismo_leak", "quake_seismometer"] else "airlock_filter" if location == "airlock" else "medical" if location == "med" else "garden" if location == "garden" else "lab_console" if location == "lab" else "life_support" if location == "main" else "eva_station"
+	var station := "seismometer" if id in ["seismometer_bump", "rerun_seismometer", "seismo_leak", "quake_seismometer"] else "airlock_filter" if location == "airlock" else "medical" if location == "med" else "garden" if location == "garden" else "lab_console" if location == "lab" else "life_support" if location == "main" else _exterior_station_for_action(id)
 	return {"id": id, "title": title, "brief": brief, "tp": tp, "points": points, "when": when, "game": game, "location": location, "challenge": challenge, "category": category, "result": result_text, "station": station}
+
+
+func _exterior_station_for_action(action_id: String) -> String:
+	match action_id:
+		"neutron_survey":
+			return "neutron_station"
+		"heat_probe", "radiation_sensor", "thermal_check", "environment_station":
+			return "field_station"
+		"rover_battery":
+			return "rover_station"
+		"collect_rock", "collect_dust":
+			return "sample_station"
+		"solar_calibration":
+			return "solar_station"
+		"leak_detector", "fix_leak", "verify_patch":
+			return "hull_station"
+		_:
+			return "eva_station"
 
 
 func _at_location(location: String) -> bool:

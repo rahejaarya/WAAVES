@@ -345,6 +345,7 @@ func _build_outside() -> void:
 	_add_nasa_habitat_model()
 	_add_solar_panels()
 	_add_satellite_dish()
+	_add_exterior_task_stations()
 	_add_lunar_surface_rocks()
 	_add_moon_route()
 
@@ -466,6 +467,24 @@ func _add_solar_panels() -> void:
 		for strip in range(1, 4):
 			var line_x := x_position - 1.0 + float(strip - 1) * 0.67
 			_make_visual_box("Solar panel cell line", Vector3(line_x, 0.16, 27.0), Vector3(0.035, 0.025, 1.5), Color("#66cde0"))
+
+
+func _add_exterior_task_stations() -> void:
+	# Field tasks each have a physical, labeled target so the Mission Control
+	# destination matches the equipment the player sees outside.
+	_add_exterior_station("Neutron spectrometer rover", "neutron_station", Vector3(-7.0, 0.0, 23.0), "NEUTRON SPECTROMETER\nTransect console")
+	_add_exterior_station("Rover battery service cart", "rover_station", Vector3(7.0, 0.0, 23.0), "ROVER POWER\nBattery / connectors")
+	_add_exterior_station("Surface environment instrument", "field_station", Vector3(12.0, 0.0, 27.0), "SURFACE STATION\nRadiation / thermal")
+	_add_exterior_station("Lunar sample collection case", "sample_station", Vector3(-12.0, 0.0, 27.0), "SAMPLE CACHE\nRock / regolith")
+	_add_exterior_station("Hull inspection and patch kit", "hull_station", Vector3(20.0, 0.0, 36.0), "HULL INSPECTION\nUltrasound / patch kit")
+	_add_exterior_station("Solar array service terminal", "solar_station", Vector3(-7.8, 0.0, 30.5), "SOLAR ARRAY\nPointing / output")
+
+
+func _add_exterior_station(station_name: String, station_id: String, position: Vector3, label_text: String) -> void:
+	var cabinet := _make_box(world_root, station_name, position + Vector3(0.0, 0.82, 0.0), Vector3(1.15, 1.64, 0.78), Color("#62777a"))
+	cabinet.set_meta("station_id", station_id)
+	_make_visual_box(station_name + " status display", position + Vector3(0.0, 1.26, -0.405), Vector3(0.72, 0.38, 0.035), Color("#4bafb1"))
+	_make_text_panel(label_text, position + Vector3(0.0, 2.05, -0.02), Vector2(2.65, 0.62), 0.0)
 
 
 func _add_satellite_dish() -> void:
