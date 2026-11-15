@@ -182,6 +182,9 @@ func interact_with_station(station_id: String) -> void:
 func _set_board_open(open: bool) -> void:
 	board.visible = open
 	if open:
+		# Always open on the task list, never still on How to Play.
+		manual_panel.visible = false
+		manual_button.text = "How to Play"
 		_scroll_to_top()
 	if is_instance_valid(player):
 		player.set_process(not open and not ended)
